@@ -1,9 +1,9 @@
-# Стримеры
+# My streamers
 
-Кого смотрим. Claude берёт стримера отсюда, если в запросе не назван другой.
-Заполните таблицу: площадка, логин/slug из ссылки на канал, язык, заметки.
+Claude uses this list when you say "clip my streamers" or don't name anyone.
+One row per channel: platform, the name from the channel link, language, notes.
 
-| Площадка | Канал (из ссылки) | Язык | Заметки (что у него обычно смешно, что пропускать) |
-|----------|-------------------|------|------------------------------------------------------|
-| twitch   | example_login     | ru   | пример — замените своим |
-| kick     | example-slug      | ru   | пример — замените своим |
+| Platform | Channel (from the link) | Language | Notes (what's usually funny, what to skip) |
+|----------|-------------------------|----------|--------------------------------------------|
+| twitch   | example_login           | ru       | example: replace with your own             |
+| kick     | example-slug            | ru       | example: replace with your own             |

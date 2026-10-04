@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><title>MOCK twitch VOD</title>
+<style>
+body{margin:0;background:#0e0e10;color:#efeff1;font:13px system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}
+header{height:44px;background:#18181b;display:flex;align-items:center;padding:0 14px;gap:10px;border-bottom:1px solid #000}
+header b{color:#9147ff;font-size:18px}.tag{background:#eb0400;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px}
+main{flex:1;display:flex;min-height:0}.player{flex:1;background:#000;display:flex;flex-direction:column}
+video{width:100%;flex:1;min-height:0;background:#000}.info{padding:10px 14px;background:#0e0e10}
+.info h1{font-size:15px;margin:0 0 4px}.info span{color:#adadb8}
+aside{width:320px;background:#18181b;border-left:1px solid #000;display:flex;flex-direction:column}
+aside h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0;padding:10px;border-bottom:1px solid #000;text-align:center}
+.video-chat__message-list-wrapper{flex:1;overflow:hidden}
+ul{list-style:none;margin:0;padding:6px 10px;height:100%;overflow-y:auto;box-sizing:border-box}
+li{padding:3px 0;line-height:20px}.ts{color:#adadb8;font-size:11px;margin-right:4px}.u{font-weight:700}
+img.chat-image{height:22px;vertical-align:middle;margin-left:3px}
+</style></head><body>
+<header><b>twitch</b><span class="tag">MOCK</span><span style="color:#adadb8">local test page — not the real site</span></header>
+<main><div class="player"><video src="/vod.webm" muted autoplay playsinline></video>
+<div class="info"><h1>Funny streamer · Past broadcast</h1><span>mock_streamer · 15:00</span></div></div>
+<aside><h2>Chat replay</h2><div class="video-chat__message-list-wrapper" data-test-selector="video-chat-message-list-wrapper"><ul></ul></div></aside></main>
+<script>
+const colors=['#ff7f50','#1e90ff','#9acd32','#ff69b4','#daa520','#00ced1'];
+window.MOCK={duration:900,
+ list:()=>document.querySelector('.video-chat__message-list-wrapper ul'),
+ render(m,nick,ts,emote){const li=document.createElement('li');
+  li.innerHTML=`<span class="ts">${ts}</span><span class="u" style="color:${colors[nick.length%6]}">${nick}</span>: <span class="text-fragment"></span>`;
+  li.querySelector('.text-fragment').textContent=m.text;
+  if(emote){const i=document.createElement('img');i.className='chat-image';i.alt=m.emote;i.src=emote;li.appendChild(i);}
+  return li;},
+ // things the real player does that the recorder must survive
+ chaos(v,t){const c=window.__chaos||(window.__chaos={});
+  if(t>120&&!c.rate){c.rate=1;v.playbackRate=1;}                                   // player resets speed
+  if(t>300&&!c.rerender){c.rerender=1;const w=document.querySelector('.video-chat__message-list-wrapper');w.replaceChild(document.createElement('ul'),w.querySelector('ul'));} // chat re-render
+  if(t>400&&!c.ad){c.ad=1;v.pause();}}                                              // ad break pause
+};
+</script><script src="/chatsim.js"></script></body></html>

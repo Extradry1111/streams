@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>MOCK kick VOD</title>
+<style>
+body{margin:0;background:#0b0e0f;color:#fff;font:13px system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}
+header{height:44px;background:#191b1f;display:flex;align-items:center;padding:0 14px;gap:10px}
+header b{color:#53fc18;font-size:18px}.tag{background:#eb0400;border-radius:4px;padding:1px 6px;font-size:11px}
+main{flex:1;display:flex;min-height:0}.p{flex:1;display:flex;flex-direction:column}video{width:100%;flex:1;min-height:0;background:#000}
+.rec{display:flex;gap:8px;padding:8px 14px;overflow:hidden;height:56px}.rec div{flex:0 0 120px;background:#24272c;border-radius:6px;padding:6px;font-size:11px}
+.x7f2a{width:320px;background:#191b1f;display:flex;flex-direction:column}.hd{padding:10px;font-weight:700;border-bottom:1px solid #000}
+.q9z{flex:1;overflow-y:auto;padding:6px 10px}.q9z>div{padding:3px 0;line-height:20px}.q9z img{height:22px;vertical-align:middle;margin-left:3px}
+.n{font-weight:700;color:#53fc18}
+</style></head><body>
+<header><b>kick</b><span class="tag">MOCK</span><span style="color:#aaa">local test page — not the real site · viewers: <span id="vc">1</span></span></header>
+<main><div class="p"><video src="/vod.webm" muted autoplay playsinline></video><div class="rec" id="rec"></div></div>
+<div class="x7f2a"><div class="hd">Chat replay</div><div class="q9z"></div></div></main>
+<script>
+// distractors: a counter that changes text and a carousel that sometimes adds cards
+setInterval(()=>{document.getElementById('vc').textContent=Math.floor(Math.random()*9000)},500);
+setInterval(()=>{const r=document.getElementById('rec');const d=document.createElement('div');d.textContent='Recommended stream #'+Math.floor(Math.random()*99);r.prepend(d);while(r.children.length>8)r.lastChild.remove();},7000);
+window.MOCK={duration:900,list:()=>document.querySelector('.q9z'),
+ render(m,nick,ts,emote){const d=document.createElement('div');
+  d.innerHTML=`<span class="n"></span>: <span class="t"></span>`;d.querySelector('.n').textContent=nick;d.querySelector('.t').textContent=m.text;
+  if(emote){const i=document.createElement('img');i.alt=m.emote;i.src=emote;d.appendChild(i);}return d;}};
+</script><script src="/chatsim.js"></script></body></html>

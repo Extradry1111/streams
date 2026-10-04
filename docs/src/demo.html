@@ -1,0 +1,42 @@
+<!doctype html><html><head><meta charset="utf-8"><title>stream-clipper demo</title>
+<style>
+:root{--bg:#f5f4ef;--card:#fff;--ink:#1f1e1d;--mute:#6b6a66;--acc:#c96442;--ok:#2f8f5b}
+body{margin:0;background:var(--bg);font:15px/1.45 system-ui,-apple-system,sans-serif;color:var(--ink);height:100vh;display:flex;justify-content:center}
+.wrap{width:880px;padding:22px 0}
+.bar{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:12px;margin-bottom:14px}
+.bar b{color:var(--ink)}.pill{background:#e9e6dc;border-radius:99px;padding:2px 9px}
+.msg{opacity:0;transform:translateY(6px);transition:all .35s}.msg.on{opacity:1;transform:none}
+.user{margin-left:auto;background:#e9e6dc;border-radius:14px;padding:10px 14px;max-width:520px;width:fit-content;margin-bottom:14px}
+.step{display:flex;gap:10px;align-items:center;padding:5px 2px;color:var(--mute)}
+.ic{width:18px;text-align:center}.done .ic{color:var(--ok)}.step b{color:var(--ink);font-weight:600}
+.prog{height:6px;background:#e3e0d6;border-radius:9px;width:220px;overflow:hidden;margin-left:8px}
+.prog i{display:block;height:100%;width:0;background:#9147ff;transition:width .2s linear}
+table{border-collapse:collapse;width:100%;background:var(--card);border-radius:10px;overflow:hidden;margin-top:12px;font-size:13.5px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top}th{background:#faf9f5;color:var(--mute);font-weight:600;font-size:12px}
+td:last-child{white-space:nowrap}td.tc{font-family:ui-monospace,monospace;white-space:nowrap}a{color:var(--acc)}
+.note{color:var(--mute);font-size:12px;margin-top:8px}
+</style></head><body><div class="wrap">
+<div class="bar"><span class="pill">Claude in Chrome</span><span>skill: <b>stream-clipper</b></span><span style="margin-left:auto">illustration · numbers from the mock test run</span></div>
+<div class="msg user" id="u">clip <b>mock_streamer</b>'s last stream</div>
+<div class="msg step" id="s1"><span class="ic">◌</span><span>Finding the last VOD on twitch.tv/mock_streamer…</span></div>
+<div class="msg step" id="s2"><span class="ic">◌</span><span>Checking viewer clips from this VOD…</span></div>
+<div class="msg step" id="s3"><span class="ic">◌</span><span>Watching the whole VOD muted at 4x, recording chat</span><span class="prog"><i id="p"></i></span><span id="pct" style="margin-left:8px;font-variant-numeric:tabular-nums">0%</span></div>
+<div class="msg step" id="s4"><span class="ic">◌</span><span>Checking each spike with screenshots + chat…</span></div>
+<div class="msg" id="r">
+<table><tr><th>#</th><th>Timecode</th><th>Len</th><th>What happens</th><th>Signals</th><th>Link</th></tr>
+<tr><td>1</td><td class="tc">3:00–3:51</td><td>51s</td><td>Falls off the bridge mid-sentence, chat explodes</td><td>score 9.9 · 114 laughs</td><td><a>?t=0h03m00s</a></td></tr>
+<tr><td>2</td><td class="tc">7:30–8:16</td><td>46s</td><td>The cat walks over the keyboard during the clutch</td><td>score 10.6 · 84 laughs · 28 "clip it"</td><td><a>?t=0h07m30s</a></td></tr>
+<tr><td>3</td><td class="tc">12:40–13:26</td><td>46s</td><td>Chat spams "clip it", worth a look</td><td>score 7.2 · 44 "clip it"</td><td><a>?t=0h12m40s</a></td></tr>
+</table>
+<div class="note">Watched 99.4% · 1,542 chat messages · dropped 2 (raid spam, stream intro)</div></div>
+</div>
+<script>
+const on=(id)=>document.getElementById(id).classList.add('on');
+const done=(id,txt)=>{const e=document.getElementById(id);e.classList.add('done');e.querySelector('.ic').textContent='✓';if(txt)e.children[1].innerHTML=txt;};
+const T=[[300,()=>on('u')],[1100,()=>on('s1')],[2100,()=>done('s1','Found <b>"Funny streamer"</b> · 15:00 · videos/123456789')],[2400,()=>on('s2')],
+[3200,()=>done('s2','<b>2</b> viewer clips from this VOD')],[3500,()=>on('s3')]];
+T.forEach(([t,f])=>setTimeout(f,t));
+setTimeout(()=>{let x=0;const iv=setInterval(()=>{x+=2;document.getElementById('p').style.width=x+'%';document.getElementById('pct').textContent=x+'%';
+ if(x>=100){clearInterval(iv);done('s3','Watched <b>99.4%</b> · 1,542 chat messages · 5 spikes');setTimeout(()=>on('s4'),300);
+ setTimeout(()=>{done('s4','Checked 5 spikes → kept <b>3</b>');on('r')},1500);}},80)},3800);
+</script></body></html>

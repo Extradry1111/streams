@@ -1,24 +1,26 @@
-# Шаблон отчёта
+# Report template
+
+Write the report in the user's language.
 
 ```markdown
-# <Стример> — <название стрима>
+# <Streamer> — <stream title>
 
-<Площадка> · <дата> · <длительность> · <ссылка на VOD>
-Просмотрено: <coveragePct>% · сообщений чата: <N> · клипов зрителей учтено: <K>
+<Platform> · <date> · <length> · <VOD link>
+Watched: <coveragePct>% · chat lines: <N> · viewer clips used: <K>
 
-| # | Таймкод | Длина | Что происходит | Почему смешно | Сигналы | Ссылка |
-|---|---------|-------|----------------|---------------|---------|--------|
-| 1 | 1:02:03–1:02:58 | 55 c | Стример уверенно объясняет тактику и в ту же секунду падает с моста | Контраст «я профи» → провал, вскакивает со стула | score 9.1, смех 140, «клипни» ×12, клип зрителей 3.4k | https://www.twitch.tv/videos/123?t=1h02m03s |
+| # | Timecode | Length | What happens | Why it's funny | Signals | Link |
+|---|----------|--------|--------------|----------------|---------|------|
+| 1 | 1:02:03–1:02:58 | 55 s | Explains his "pro strategy" and falls off the bridge the same second | "I'm a pro" → instant fail, jumps out of his chair | score 9.1, 140 laughs, 12× "clip it", viewer clip 3.4k views | https://www.twitch.tv/videos/123?t=1h02m03s |
 | 2 | ... | | | | | |
 
-Нужно послушать (смеялись на звук, на экране ничего не видно):
-- 2:14:40–2:15:30 — чат пишет «ахах его голос», визуально ничего
+Needs a listen (chat laughed at audio, nothing visible):
+- 2:14:40–2:15:30 — chat: "his voice LMAO", nothing on screen
 
-Отброшено: 7 (рейд ×2, донат-алерты ×3, начало стрима, без контекста непонятно).
+Dropped: 7 (raid ×2, donation alerts ×3, stream intro, needs back-story).
 ```
 
-Правила:
-- Лучшие сверху. Номер — это приоритет.
-- «Что происходит» — только увиденное на скриншотах и прочитанное в чате.
-- Сигналы — цифры из `analyze()` и клипов зрителей, чтобы пользователь видел, насколько
-  момент подтверждён.
+Rules:
+- Best first; the number is the priority.
+- "What happens": only what you saw on screenshots and read in chat.
+- Signals: numbers from `analyze()` and viewer clips, so the user sees how well each
+  moment is confirmed.

@@ -1,56 +1,57 @@
-# Как отличить смешной момент от просто шумного
+# Telling a funny moment from a merely loud one
 
-## Что возвращает analyze()
+## What analyze() returns
 
-- `score` — во сколько раз чат в этом месте активнее обычного для этого же отрезка
-  стрима (база — ±5 минут вокруг), с бонусом за смех (×2), «клипни» (×3) и хайп (×0.5).
-  Ориентир: < 2 — шум; 2-4 — посмотреть; > 4 — почти наверняка что-то случилось.
+- `score`: how many times busier chat is here than usual for the surrounding ±5 min,
+  with bonuses for laughter (×2), "clip it" (×3) and hype (×0.5).
+  Rough guide: < 2 noise · 2-4 worth a look · > 4 something definitely happened.
 - `kind`:
-  - `funny` — большая часть сообщений — смех. Главный тип.
-  - `clip-call` — просят клип. Часто смешное, но бывает «эпичное» (красивый килл).
-  - `hype` — всплеск без смеха: донат, рейд, победа, скример, спор в чате. Проверяй,
-    но чаще выкидывай — если только на экране не происходит что-то явно смешное.
-- `laughs`, `clipCalls`, `msgs` — сырые счётчики в окне.
+  - `funny`: most messages are laughter. The main target.
+  - `clip-call`: people ask for a clip. Often funny, sometimes just epic (a great play).
+  - `hype`: a spike without laughter: donation, raid, win, jump scare, chat argument.
+    Check it, but usually drop it unless the screen shows something clearly funny.
+- `laughs`, `clipCalls`, `msgs`: raw counts in the window.
+- `url`: VOD link that opens at `start`.
 
-## Выкидывай сразу
+The first and last 5 minutes of the stream are skipped automatically (hello/bye spam);
+pass `analyze({ skipEdges: 0 })` if something there matters.
 
-- Начало и конец стрима (первые/последние ~5 минут): «привет/пока» даёт всплеск.
-- Рейды, массовые подписки, донат-алерты: чат спамит одно и то же, это не смех.
-  Видно по `context()` — одинаковые сообщения, ники, «спасибо за рейд».
-- Розыгрыши и голосования: спам цифрами или командой (`!join`, `1`, `2`).
-- Пики во время рекламы или экрана «Скоро вернусь» / «AFK».
-- Моменты, где без 10 минут предыстории не понятно, над чем смеются.
+## Drop on sight
 
-## Что делает момент хорошим клипом
+- Raids, gifted-sub waves, donation alerts: chat spams the same line. Visible in
+  `context()`: identical messages, "welcome raiders", names.
+- Giveaways and polls: spam of a command or numbers (`!join`, `1`, `2`).
+- Spikes during ads or a "BRB" / "AFK" screen.
+- Moments that need 10 minutes of back-story to get.
 
-1. **Понятно с первой секунды** или за первые 5-10 секунд. Зритель TikTok/Shorts
-   не знает стримера.
-2. **Есть завязка и развязка**: что-то идёт не так / неожиданная реплика → реакция
-   стримера (смех, крик, ступор) → реакция чата.
-3. **Видна реакция**: на вебке видно лицо, жест, падение, вскакивание. Чистый геймплей
-   без вебки и без событий на экране смешон редко.
-4. **Длина по делу**: обрезай всё до завязки и после того, как смех стих. 30-60 c —
-   лучше всего; до 120 c — только если история действительно длинная.
-5. Не обрывай на полуслове: начинай в паузе перед событием, заканчивай после реакции.
+## What makes a good clip
 
-## Подбор границ
+1. **Clear from the first second**, or within 5-10 s. A Shorts/TikTok viewer doesn't
+   know the streamer.
+2. **Setup and payoff**: something goes wrong / unexpected line → streamer reacts
+   (laughs, yells, freezes) → chat reacts.
+3. **Visible reaction**: face on the webcam, jumping up, falling. Pure gameplay with no
+   webcam and nothing happening on screen is rarely funny out of context.
+4. **No fat**: cut everything before the setup and after the laughter dies. 30-60 s is
+   best; up to 120 s only if the story really is that long.
+5. Don't cut mid-sentence: start in a pause before the event, end after the reaction.
 
-- Чат реагирует через 2-8 c после события, а при ускоренном проигрывании таймкоды
-  могут уехать ещё на несколько секунд. Поэтому `analyze()` уже начинает окно на
-  20 c раньше пика. На проверке смотри скриншоты от `start` и сдвигай начало к
-  моменту, когда завязка реально начинается.
-- Если в 1-2 минутах друг от друга два пика об одном и том же — объединяй в один клип
-  (не длиннее 120 c), если о разном — это два клипа.
+## Setting the bounds
 
-## Если чата нет (или он очень тихий)
+- Chat reacts 2-8 s after the event, so `analyze()` already starts 20 s before the
+  spike. On review, move the start to where the setup actually begins.
+- Two spikes within 1-2 min about the same thing → one clip (≤ 120 s). About different
+  things → two clips.
 
-Чат-сигнала нет — остаётся визуальный проход. Он медленнее и хуже, предупреди
-пользователя.
+## No chat (or almost none)
 
-1. Сначала клипы зрителей — если есть, это основной источник.
-2. Иначе: шаг 60 c по всей записи (`seek`, скриншот), отмечай кадры, где что-то
-   необычное: стример вскочил/смеётся/закрыл лицо, на экране смерть/провал/странная
-   ситуация, гость в кадре, крупный текст.
-3. Вокруг отмеченных точек — плотнее: скриншоты каждые 5-10 c, чтобы найти завязку
-   и конец.
-4. В отчёте явно пометь, что моменты найдены без чата и звука — уверенность ниже.
+Less than about one message a minute means the chat signal is useless. Fall back to a
+visual pass; tell the user it is slower and less reliable.
+
+1. Viewer clips first; if there are some, they are the main source.
+2. Otherwise step through the VOD every 60 s (`seek`, screenshot) and mark frames where
+   something unusual happens: streamer jumped up / laughing / face in hands, a death or
+   fail on screen, a guest in frame, big on-screen text.
+3. Around marked points go denser (every 5-10 s) to find setup and end.
+4. Mark in the report that these were found without chat or audio, so confidence is
+   lower.

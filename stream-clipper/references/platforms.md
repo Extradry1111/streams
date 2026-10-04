@@ -1,49 +1,45 @@
-# Площадки: где что лежит
+# Platforms: where things are
 
-Вёрстка Twitch и Kick меняется. Если ссылка или кнопка не там, где здесь написано, —
-найди её через `find` / `read_page` и не трать время на угадывание.
+Twitch and Kick change their layout. If a link or button isn't where this says, find it
+with `find` / `read_page` instead of guessing.
 
 ## Twitch
 
-| Что | Ссылка |
-|-----|--------|
-| Все прошедшие трансляции | `https://www.twitch.tv/<login>/videos?filter=archive&sort=time` |
-| Хайлайты (стример сам сохранил) | `https://www.twitch.tv/<login>/videos?filter=highlights&sort=time` |
-| Клипы зрителей за неделю | `https://www.twitch.tv/<login>/clips?filter=clips&range=7d` |
-| Клипы за месяц / всё время | `range=30d` / `range=all` |
-| VOD с нужного места | `https://www.twitch.tv/videos/<id>?t=1h02m03s` |
+| What | Link |
+|------|------|
+| Past broadcasts | `https://www.twitch.tv/<login>/videos?filter=archive&sort=time` |
+| Highlights (saved by the streamer) | `https://www.twitch.tv/<login>/videos?filter=highlights&sort=time` |
+| Viewer clips, last 7 days | `https://www.twitch.tv/<login>/clips?filter=clips&range=7d` |
+| Last 30 days / all time | `range=30d` / `range=all` |
+| VOD at a time | `https://www.twitch.tv/videos/<id>?t=1h02m03s` |
 
-- Записи хранятся 7-60 дней в зависимости от статуса стримера. Старые могут исчезнуть.
-- Некоторые стримеры делают записи только для подписчиков — тогда плеер покажет
-  заглушку. Скажи пользователю; не обходи.
-- В чат-реплее у сообщений обычно есть таймкод VOD слева — скрипт использует его, когда
-  он есть, это точнее, чем время плеера на ускорении.
-- Эмоуты (KEKW, OMEGALUL и т.п.) — картинки; скрипт читает их `alt`, так что смех
-  считается и когда в сообщении одни эмоуты.
-- Реклама в начале и посреди VOD: дождись окончания, видео встанет на паузу — нажми play.
-- Возрастное предупреждение («Начать просмотр») — нажать можно, это не обход ограничений.
-- Если скорость плеера сбрасывается на 1x — у плеера Twitch свои настройки скорости
-  (шестерёнка → скорость воспроизведения), можно выставить там.
+- VODs are kept 7-60 days depending on the streamer; old ones disappear.
+- Some streamers make VODs subscriber-only: the player shows a lock screen. Tell the
+  user; do not work around it.
+- Chat replay lines usually start with the VOD timestamp; the recorder uses it, which
+  is more accurate than player time at 4x.
+- Emotes (KEKW, OMEGALUL…) are images; the recorder reads their `alt`, so emote-only
+  messages still count as laughter.
+- Ads at the start and mid-VOD pause the video. `status().next` will say so; wait them
+  out.
+- The "Start watching" age gate can be clicked; that is not bypassing anything.
 
 ## Kick
 
-| Что | Ссылка |
-|-----|--------|
-| Записи трансляций | `https://kick.com/<slug>/videos` |
-| Клипы | `https://kick.com/<slug>/clips` |
-| Запись | `https://kick.com/<slug>/videos/<uuid>` |
+| What | Link |
+|------|------|
+| VODs | `https://kick.com/<slug>/videos` |
+| Clips | `https://kick.com/<slug>/clips` |
+| One VOD | `https://kick.com/<slug>/videos/<uuid>` |
 
-- У записей Kick тоже есть чат-реплей, но он бывает свёрнут или открывается кнопкой.
-  Если чата у записи нет вовсе — работай по клипам и визуальному проходу
-  (`signals.md` → «Если чата нет»).
-- Перемотка по ссылке (`?t=`) на Kick работает не всегда — в отчёте всегда давай
-  таймкод текстом, а ссылку как дополнение.
-- Kick может показать проверку «я не робот». Её проходит пользователь, не Claude:
-  попроси его и подожди.
+- Kick VODs have a chat replay, but it can be collapsed behind a button. Open it before
+  `auto()`. The recorder auto-detects Kick's chat list even when its markup changes.
+- `?t=` links don't always seek on Kick: always give the timecode as text too.
+- If Kick shows a "verify you are human" check, the **user** solves it. Ask and wait.
 
-## Общие правила
+## Rules
 
-- Только записи, которые открыты пользователю в его браузере. Без скачивания через
-  сторонние сервисы, без обхода сабскрайб-локов и гео-ограничений.
-- Не пиши в чат стримера, не ставь лайки/фоллоу, не создавай клипы на площадке от
-  имени пользователя, если он прямо не попросил.
+- Only VODs the user can open in their own browser. No third-party downloaders, no
+  bypassing subscriber locks or geo-blocks.
+- Don't post in chat, follow, like, or create clips on the platform for the user unless
+  they explicitly ask.

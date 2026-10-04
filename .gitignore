@@ -1,0 +1,4 @@
+docs/src/out/
+tests/out/
+tests/mock/vod.webm
+tests/last-run.log

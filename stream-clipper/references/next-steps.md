@@ -1,18 +1,18 @@
-# Следующие этапы (пока не реализованы)
+# Next stages (not built yet)
 
-Делать только когда пользователь попросит. Здесь — заметки, чтобы не забыть ограничения.
+Only when the user asks. Notes so the constraints aren't forgotten.
 
-## Субтитры
+## Subtitles
 
-- Для субтитров нужна расшифровка речи. Claude in Chrome звук не слышит, поэтому
-  нужен инструмент распознавания: например, Descript (есть коннектор), Whisper
-  локально, или автосубтитры редактора, в котором будет монтаж.
-- Нужен сам отрезок видео: скачанный VOD-фрагмент или клип, созданный на площадке
-  (кнопка «Клип» на Twitch/Kick, до 60 c на Twitch).
-- Стиль: крупные слова по 1-3 за раз, выделение ключевого слова цветом, эмодзи
-  по месту — уточнить у пользователя.
+- Subtitles need a speech transcript. Claude in Chrome can't hear audio, so this needs a
+  speech-to-text tool: e.g. Descript (connector available), Whisper locally, or the
+  auto-captions of the editor used for the cut.
+- It needs the actual video segment: a downloaded VOD part, or a clip made on the
+  platform (the "Clip" button on Twitch/Kick; Twitch clips max 60 s).
+- Style: big words, 1-3 at a time, key word highlighted in color, emoji where it fits.
+  Confirm with the user.
 
-## Заголовок
+## Title
 
-- Короткий, интригующий, без спойлера развязки, на языке аудитории.
-- 3-5 вариантов на выбор под каждую площадку (TikTok / Shorts / Reels).
+- Short, intriguing, doesn't spoil the payoff, in the audience's language.
+- 3-5 options per platform (TikTok / Shorts / Reels).

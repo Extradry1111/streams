@@ -1,150 +1,138 @@
 ---
 name: stream-clipper
 description: >-
-  Находит самые смешные моменты в записях стримов (VOD) на Twitch и Kick и нарезает из них
-  кандидатов в клипы длиной 30-120 секунд с точными таймкодами. Работает через расширение
-  Claude in Chrome: открывает канал выбранного стримера, берёт нужную запись, прогоняет её
-  целиком на ускорении, записывая чат-реплей, находит всплески смеха и «клипни» в чате,
-  сверяет их с клипами зрителей, а потом проверяет каждый момент глазами (скриншоты) и
-  отбирает лучшие. Используй, когда просят найти смешные/угарные моменты на стриме, нарезать
-  клипы, хайлайты или шортсы из стрима, пересмотреть VOD или запись трансляции, найти
-  моменты для TikTok/Shorts/Reels у стримера на Twitch или Kick. Trigger words: клипы со
-  стрима, нарезка стрима, смешные моменты, хайлайты, VOD, запись стрима, twitch clips,
-  kick clips, stream highlights, funny moments, clip finder.
+  Finds the funniest moments in Twitch and Kick stream recordings (VODs) and returns
+  ready-to-cut clip candidates of 30-120 seconds with exact timecodes and links. Works
+  through the Claude in Chrome extension: opens the streamer's channel, picks the VOD,
+  plays the whole thing muted at 4x while recording the chat replay, finds the spikes of
+  laughter and "clip it" in chat, cross-checks viewer clips, then looks at every candidate
+  with screenshots and keeps the best. Use it whenever someone asks to find funny moments,
+  highlights, clips, shorts or TikToks in a stream, VOD, past broadcast or stream recording,
+  or says "clip <streamer>" / "clip this VOD" for Twitch or Kick, in any language
+  (клипы со стрима, нарезка, смешные моменты, хайлайты).
 ---
 
 # stream-clipper
 
-Цель: из записи стрима получить список из 5-15 лучших моментов, каждый 30-120 секунд,
-которые смешны **сами по себе** (без часа контекста), с точными таймкодами начала и конца
-и ссылкой, которая открывает VOD прямо на этом месте.
+Goal: from one stream recording, a ranked list of 5-15 moments, each 30-120 s long and
+funny **on its own** (no hour of context needed), with exact start/end and a link that
+opens the VOD at that spot.
 
-Этот этап — только поиск и отбор моментов. Субтитры и заголовки — следующий этап
-(`references/next-steps.md`), не делай их, пока пользователь не попросит.
+This stage is finding and picking moments only. Subtitles and titles come later
+(`references/next-steps.md`); do not do them unless asked.
 
-## Честно о том, как Claude «смотрит» стрим
+## How Claude "watches" a stream (be upfront about this)
 
-Через Chrome Claude видит страницу и скриншоты, но **не слышит звук**. Поэтому «просмотр»
-стрима строится на трёх сигналах, которые вместе работают лучше, чем покадровый просмотр:
+Claude sees the page and screenshots but **cannot hear audio**. So watching is done with
+three signals that together beat frame-by-frame viewing:
 
-1. **Чат-реплей.** Зрители реагируют на смешное через 2-8 секунд: KEKW, LUL, ахахах,
-   «ору», «клипни». Скрипт `scripts/clip_recorder.js` проигрывает весь VOD на ускорении
-   (без звука) и пишет каждое сообщение с привязкой ко времени видео. Это и есть
-   «пересмотреть полностью»: покрытие считается в процентах, и пока оно не ~100%, работа
-   не закончена.
-2. **Клипы зрителей.** Если зрители уже нарезали клипы с этого стрима — это готовые
-   подтверждённые моменты. Самые просматриваемые идут в список первыми.
-3. **Визуальная проверка.** Каждого кандидата Claude открывает и смотрит серией
-   скриншотов + читает чат в этом окне, чтобы понять, что там произошло и стоит ли оно
-   клипа.
+1. **Chat replay.** Viewers react to funny things 2-8 s later: KEKW, LUL, "ахахах",
+   "ору", "clip it". `scripts/clip_recorder.js` plays the full VOD muted at 4x and logs
+   every chat line against video time. Coverage is tracked in %; the job is not done
+   until it is ~100%.
+2. **Viewer clips** of this VOD. Already-confirmed moments; most viewed first.
+3. **Visual check.** Every candidate is reviewed with screenshots + the chat in that
+   window.
 
-Если момент смешной только на слух (шутка голосом, без реакции на экране и в чате),
-Claude его не поймает или не сможет оценить — такие помечай «нужно послушать» и
-говори об этом пользователю, а не выдумывай содержание.
+A joke that is funny only by sound may be missed or impossible to judge. Mark such
+moments **"needs a listen"** and say so. Never invent what someone said.
 
-## Перед началом
+## Inputs
 
-1. Прочитай скилл **chrome-browser** (anthropic-skills:chrome-browser) и загрузи
-   инструменты `mcp__claude-in-chrome__*` одним вызовом ToolSearch. Если расширение не
-   подключено — скажи пользователю установить/включить Claude in Chrome и остановись.
-2. Узнай, **какого стримера** и **какую запись** брать. Список стримеров пользователя —
-   в `streamers.md` рядом с этим файлом (если он заполнен). Если стример не указан и
-   список пуст — спроси. Если запись не указана — бери последнюю завершённую.
-3. Работай в **новой вкладке** и держи её видимой: Chrome притормаживает видео в фоновых
-   вкладках, и тогда чат-реплей перестаёт идти.
+- **Who / what.** A streamer (`clip xqc`, `clip kick.com/somebody`) or a VOD link.
+  No streamer named → use `streamers.md`; if it is empty, ask once.
+  "clip all my streamers" → go through `streamers.md` one streamer at a time.
+- **Which VOD.** Default: the latest finished one. Accept "yesterday's", "the one
+  with <game>", or a link.
+- Options the user may give: number of clips (default up to 10), length range
+  (default 30-120 s), language of the report (default: the user's language).
 
-## Шаг 1. Найти запись
+## Step 0. Browser
 
-Ссылки и особенности площадок — в `references/platforms.md`. Кратко:
+Read the **chrome-browser** skill (anthropic-skills:chrome-browser) and load the
+`mcp__claude-in-chrome__*` tools with one ToolSearch call. If the extension is not
+connected, tell the user to install/enable Claude in Chrome and stop.
 
-- Twitch: `https://www.twitch.tv/<login>/videos?filter=archive&sort=time` → первая карточка.
-  Ссылка вида `https://www.twitch.tv/videos/<id>`.
-- Kick: `https://kick.com/<slug>/videos` → первая карточка.
-  Ссылка вида `https://kick.com/<slug>/videos/<uuid>`.
+Open a **new tab** for the work and keep it the visible tab while the VOD plays: Chrome
+throttles video in background tabs. Tell the user once: "Please leave this tab in front
+while I watch; you can use other windows."
 
-Запиши: название стрима, дату, длительность, ссылку. Если записей нет (стример их
-удаляет или они только для сабов) — сообщи пользователю и предложи другого стримера
-или запись, не пытайся обходить ограничения доступа.
+## Step 1. Find the VOD
 
-## Шаг 2. Клипы зрителей (быстрый сигнал)
+Links and quirks: `references/platforms.md`.
 
-Открой клипы канала за период, куда попадает стрим (Twitch: `/clips?filter=clips&range=7d`,
-Kick: `/<slug>/clips`). Для клипов **именно с этой записи** выпиши: название, просмотры,
-таймкод в VOD (на Twitch у клипа есть «Смотреть полное видео» со ссылкой `?t=`).
-Ограничься топ-20 по просмотрам. Если клипов нет — нормально, переходи дальше.
+- Twitch: `https://www.twitch.tv/<login>/videos?filter=archive&sort=time` → first card.
+- Kick: `https://kick.com/<slug>/videos` → first card.
 
-## Шаг 3. Прогнать запись целиком и записать чат
+Note title, date, length, link. No VODs (deleted or subscriber-only) → tell the user
+and offer another VOD/streamer. Never try to get around access restrictions.
 
-1. Открой VOD, дождись загрузки плеера, закрой оверлеи (возрастное предупреждение,
-   «продолжить с места», реклама — дождись её конца, не кликай по рекламе).
-2. Убедись, что чат-реплей открыт (на Twitch — панель справа; на Kick — чат под/рядом
-   с плеером). Если свёрнут — разверни.
-3. Через `javascript_tool` вставь **всё содержимое** `scripts/clip_recorder.js`.
-   Ответ должен быть `installed on twitch|kick`.
-4. Запусти: `__clipRec.start({ rate: 4 })`.
-   - `ok:false, chat container not found` → найди список сообщений чата через `find`
-     / `read_page`, подбери CSS-селектор и вызови `__clipRec.start({ rate: 4, chatSelector: '...' })`.
-5. Каждые 1-3 минуты проверяй `__clipRec.status()`:
-   - `messages` должен расти. Если не растёт 2 проверки подряд при идущем видео —
-     чат не успевает за скоростью: `__clipRec.setRate(2)`.
-   - `rate` сбросился на 1 → плеер перезаписал скорость, поставь снова `setRate(4)`.
-   - `paused: true` → реклама/буферизация/оверлей: сделай скриншот, разберись, нажми play.
-   - `chatAttached: false` → страница перерисовала чат: снова `start(...)` с теми же
-     параметрами (накопленные сообщения сохранятся).
-   Между проверками ничего не кликай на странице.
-6. Когда видео дошло до конца, вызови `__clipRec.uncovered()`. Для каждого пропущенного
-   куска: `__clipRec.seek(<начало>)` и дай проиграть. Цель — `coveragePct` ≥ 95.
-7. Если страница всё-таки перезагрузилась, данные в ней пропадут. Чтобы этого не
-   случилось на длинном стриме, раз в ~30 минут проигрывания сохраняй
-   `__clipRec.dump(<сколько уже сохранено>)` (в файл, если есть файловые инструменты,
-   иначе просто запомни число сообщений) и после перезагрузки верни их через
-   `__clipRec.load([...])`.
+## Step 2. Viewer clips (fast signal, optional)
 
-Чат очень тихий (меньше ~1 сообщения в минуту)? Тогда чат-сигнал бесполезен:
-переходи на визуальный проход из `references/signals.md` («Если чата нет»).
+Open the channel's clips for the period of the stream (Twitch `/clips?filter=clips&range=7d`,
+Kick `/<slug>/clips`). For clips **from this VOD**, note title, views and VOD timecode
+(Twitch clip pages link to the full video with `?t=`). Top 20 by views at most. If there
+are none, skip.
 
-## Шаг 4. Найти кандидатов
+## Step 3. Watch the whole VOD
 
-`__clipRec.analyze({ top: 20 })` вернёт окна вида
-`{startTc, endTc, len, score, laughs, clipCalls, kind}`, уже обрезанные до 30-120 c
-с запасом ~20 c на завязку перед реакцией чата.
+1. Open the VOD and let the player load. Clear overlays: age gate ("Start watching" is
+   fine to click), "resume from…", wait out pre-roll ads (never click ads).
+2. Make sure the chat replay panel is open and visible (expand it if collapsed).
+3. Run the **entire** contents of `scripts/clip_recorder.js` with the Chrome
+   JavaScript tool. Expected reply: `installed on twitch|kick; call __clipRec.auto()`.
+4. Run `__clipRec.auto()`.
+5. Then loop: wait ~2-3 min (do not touch the page), run `__clipRec.status()`, and do
+   exactly what its `next` field says. It covers every case:
+   - `Watching… ~N min left` → keep waiting.
+   - `Looking for the chat…` → check again in 15 s (it auto-detects unknown layouts).
+   - `Video has been paused…` → screenshot; wait out an ad or close the prompt; check again.
+   - `Chat replay not found…` → follow the hint; if the VOD truly has no chat replay,
+     use "No chat" in `references/signals.md`.
+   - `Finished.` → go to step 4.
 
-Объедини с клипами зрителей из шага 2: совпадение по времени (±60 c) — сильный
-кандидат; клип зрителей без пика в чате — тоже кандидат.
+   The script handles the rest by itself: it re-applies 4x when the player resets the
+   speed, resumes after short pauses, reattaches when chat re-renders, slows to 2x if
+   chat can't keep up, fills unwatched gaps at the end, and saves progress so a page
+   reload loses nothing (paste the script again and call `auto()` to resume).
 
-Как читать `score` и `kind`, и какие пики выкидывать сразу — `references/signals.md`.
+A 4-hour VOD takes about an hour. Give the user the ETA from `status().etaMin` once,
+not on every check.
 
-## Шаг 5. Проверить каждого кандидата глазами
+## Step 4. Candidates
 
-Для каждого кандидата (от высокого score к низкому, пока не наберётся 5-15 хороших):
+`__clipRec.analyze()` returns up to 15 windows:
+`{startTc, endTc, len, score, kind, laughs, clipCalls, url}`, already cut to 30-120 s
+with ~20 s of setup before the chat reaction. Pass options if the user asked for
+something else: `analyze({ top: 20, minLen: 20, maxLen: 60 })`.
 
-1. `__clipRec.context(start - 30, end + 15)` — прочитай, **над чем** смеётся чат.
-   Цитаты из чата часто прямо называют событие («он упал со стула», «ахах пауза»).
-2. `__clipRec.setRate(1)`, `__clipRec.seek(start)`, затем 5-8 скриншотов с шагом ~10-15 c
-   до `end`. Смотри: что происходит в кадре, лицо стримера (вебка), игра, текст на экране.
-3. Реши по критериям из `references/signals.md`:
-   - понятно ли без предыстории;
-   - где реально начинается завязка и где заканчивается реакция — подвинь границы,
-     длина должна остаться 30-120 c;
-   - не реклама, не донат-экран, не пауза/«отошёл».
-4. Отбрось слабых. Если реакция чата была на звук, а на экране ничего не видно —
-   оставь с пометкой «нужно послушать».
+Merge with viewer clips: a clip within ±60 s of a candidate makes it stronger; a
+viewer clip with no chat spike is still a candidate.
 
-## Шаг 6. Отчёт
+How to read `score` / `kind` and what to drop on sight: `references/signals.md`.
 
-Выдай пользователю таблицу, лучшие сверху (формат — `references/report-template.md`):
+## Step 5. Check every candidate yourself
 
-| # | Таймкод | Длина | Что происходит | Почему смешно | Сигналы | Ссылка |
-|---|---------|-------|----------------|---------------|---------|--------|
+Best score first, until you have enough good ones:
 
-- Ссылка открывает VOD на `start` (Twitch: `?t=1h02m03s`, Kick: `?t=<секунды>` — если
-  Kick не перематывает по ссылке, просто дай таймкод).
-- «Что происходит» — только то, что видно на скриншотах и в чате. Не придумывай реплики,
-  которые ты не слышал.
-- В конце: покрытие записи в %, сколько сообщений чата обработано, сколько кандидатов
-  отброшено и почему (одной строкой).
+1. `__clipRec.context(start - 30, end + 15)` and read **what** chat is laughing at.
+   Chat often names it ("he fell off the bridge", "the cat").
+2. `__clipRec.pause()`, `__clipRec.setRate(1)`, `__clipRec.seek(start)`, then 5-8
+   screenshots ~10-15 s apart until `end`. Look at the webcam (face, jumping up,
+   covering face), the game, on-screen text.
+3. Decide with the checklist in `references/signals.md`: understandable without
+   back-story? where does the setup really start and the reaction end? Adjust the
+   bounds (stay within the length range). Drop ads, alerts, BRB screens, raids.
+4. Chat reacted to sound and nothing is visible → keep it marked "needs a listen".
 
-Если есть файловые инструменты, сохрани отчёт в
-`clips/<streamer>/<YYYY-MM-DD>-<id>.md` и сырой результат `analyze()` рядом как `.json`.
+## Step 6. Report
 
-После отчёта спроси, какие моменты берём дальше (субтитры, заголовок) — и остановись.
+Use `references/report-template.md`: a table, best first, with timecode, length, what
+happens, why it's funny, signals, link. "What happens" = only what you saw on
+screenshots and read in chat. Finish with one line: % watched, chat lines processed,
+how many candidates were dropped and why.
+
+If file tools are available, also save it to `clips/<streamer>/<YYYY-MM-DD>-<vod id>.md`
+with the raw `analyze()` output next to it as `.json`.
+
+Then ask which moments to take further (subtitles, titles) and stop.

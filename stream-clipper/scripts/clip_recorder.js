@@ -25,7 +25,7 @@
   const MAX_SAVED_MSGS = 25000;
 
   // Laugh tokens. Emotes are <img>, so message text includes their alt (see msgText).
-  const LAUGH = /(KEKW|OMEGALUL|LULW?|LMAO|LMFAO|ROFL|\bLOL\b|ICANT|\bxd+\b|pepeLaugh|KEKL|\b(?:ha){2,}|\b(?:ah){2,}|😂|🤣|💀)/i;
+  const LAUGH = /(KEKW|OMEGALUL|LULW?|LMAO|LMFAO|ROFL|\bLOL\b|ICANT|\bxd+\b|pepeLaugh|KEKL|HaHaa|emojiDead|emojiLol|emojiRofl|\b(?:ha){2,}|\b(?:ah){2,}|😂|🤣|💀)/i;
   // \b does not work with Cyrillic, so word edges use lookarounds.
   const LAUGH_RU = /(?<![а-яё])(а?(?:ха){2,}х?|а?(?:хах)+|(?:ах){2,}а?|п+х+[ах]*|ору+|орнул\S*|ржу|ржака|угар|азаз\S*)(?![а-яё])/i;
   const CLIP = /(\bclip\b|clip it|clipped|клип|клипни|в клипы|момент)/i;
@@ -462,5 +462,6 @@
   window.__clipRec = api;
   window.__clipAnalyze = analyzeBuckets; // for tests
   window.__clipRecBucket = BUCKET;
+  window.__clipRecTest = { isLaugh, isHype, CLIP }; // for tests and offline runs
   return `installed on ${platform}` + (S.restored ? ` (restored ${S.restored} chat msgs from before reload)` : '') + '; call __clipRec.auto()';
 })();

@@ -1,110 +1,113 @@
 # stream-clipper
 
-A Claude skill that **finds the funniest 30-120 second moments in Twitch and Kick
-stream recordings** and gives you a ranked list with timecodes and links. It runs in
-your own Chrome through the **Claude in Chrome** extension.
+A Claude skill that turns **Twitch and Kick stream recordings into ready-to-post clips**.
+It reads the whole chat replay, finds the funniest 30-120 second moments, checks each one
+on video, then cuts them in **1080p** and renders a **TikTok short (9:16)** and a
+**regular video (16:9)** of each, with animated subtitles and a hook title.
 
-![What using it looks like](docs/demo.gif)
-<sub>Illustration of a session. The numbers come from the automated test run below.</sub>
+![A finished short: hook title, the action, word-by-word captions](docs/short-example.gif)
+<sub>A real clip made by the skill from a Kick VOD (clavicular, Oct 3 2026).</sub>
 
 ## How to use it
 
-Say one of these to Claude (with Claude in Chrome connected):
+Say one of these to Claude:
 
 ```
-clip xqc
+clip https://kick.com/clavicular/videos/01a102e3-30b0-7f5f-972c-8a97d56bb51a
 clip the last stream of kick.com/somebody
-clip https://www.twitch.tv/videos/123456789
-find funny moments in yesterday's stream of <streamer>, 5 clips, max 60 s
+find funny moments in xqc's last stream, 5 clips, max 60 s
+add subtitles and make shorts from these clips
 clip my streamers
 ```
 
-Then leave the stream tab in front (you can use other windows) and wait about an hour
-for a 4-hour stream. You get a table like this:
+What you get back:
 
-| # | Timecode | Length | What happens | Signals | Link |
-|---|----------|--------|--------------|---------|------|
-| 1 | 1:02:03–1:02:58 | 55 s | Explains his "pro strategy", falls off the bridge the same second | score 9.1 · 140 laughs · 12× "clip it" | `?t=1h02m03s` |
+1. **A report:** the moments ranked, with timecodes, what happens, why it's funny, and
+   how hard chat reacted. Example: [`clips/clavicular/2026-10-03-01a102e3.md`](clips/clavicular/2026-10-03-01a102e3.md).
+2. **For each moment:**
+   - `NN-name-short.mp4`: 1080×1920 for TikTok, Shorts and Reels. Blurred background,
+     the action in the middle, a hook title on top, captions in yellow word by word.
+   - `NN-name-wide.mp4`: 1920×1080 for YouTube or X, with captions at the bottom.
+   - Post titles and hashtags.
 
-To avoid typing the name every time, put your streamers in
-[`stream-clipper/streamers.md`](stream-clipper/streamers.md) before installing.
+Swear words are masked in the captions (F*CK) so TikTok doesn't limit the clip. The
+audio isn't changed. Lines that could get a clip taken down are trimmed, and Claude tells
+you what it cut.
 
-## How it "watches" a stream
+## How it works
 
-Claude can see the page but **can't hear audio**, so it uses three signals:
+| Step | How |
+|------|-----|
+| Read the stream | Downloads the **whole chat replay** (Kick: 125k messages for a 24 h stream in ~4 min) |
+| Find moments | Spikes of laughter (KEKW, LMAO, 💀, ахах, ору…) and "clip it" compared with the surrounding 10 minutes. Each chatter counts once per 5 s, so spammers can't fake a spike |
+| Check them | Reads what chat said at that moment and looks at 12 frames from the video. Drops raids, alerts and intros |
+| Cut | Downloads only the needed seconds of the stream at **real 1080p60** (no upscaling) |
+| Subtitles | Transcribes the speech with Descript (your connector) or faster-whisper, then burns in TikTok-style captions (Montserrat Black, word highlight) |
+| Shorts | Renders 9:16 and 16:9 versions with ffmpeg, sized to fit upload limits if needed |
 
-1. **Chat replay.** A small script plays the whole VOD muted at 4x and logs every chat
-   line against video time. Laughter (KEKW, LUL, LMAO, ахах, ору, 😂…) and "clip it"
-   spikes mark the moments. A panel in the corner shows progress: % watched, chat
-   lines, and a heat strip.
-2. **Viewer clips** made from that VOD.
-3. **A visual check.** For every candidate Claude reads the chat at that moment and
-   takes screenshots. It drops raids, donation alerts and intros, and trims the start
-   and end.
+All the steps above are in one script, [`stream-clipper/scripts/clipper.py`](stream-clipper/scripts/clipper.py),
+which you can also run yourself (`python3 clipper.py -h`).
+
+### Two ways to run it
+
+| | **Terminal mode** (recommended) | **Chrome mode** |
+|---|---|---|
+| Where | Claude Code, or a Claude session with a terminal | Claude app / claude.ai + Claude in Chrome |
+| Finds moments | ✅ from the downloaded chat | ✅ plays the VOD at 4x in your browser and records chat |
+| Cuts clips, subtitles, shorts | ✅ | ❌ gives timecodes, then you finish in terminal mode |
+| Twitch | video ✅ (needs `yt-dlp`), chat via Chrome mode | ✅ |
+| Kick | ✅ end to end | ✅ |
+
+Chrome mode uses [`clip_recorder.js`](stream-clipper/scripts/clip_recorder.js). It plays
+the VOD muted at 4x, logs every chat line, and recovers on its own from speed resets,
+ads, chat re-renders and reloads:
 
 ![The recorder running on a mock Twitch VOD](docs/recording.gif)
-<sub>The real script running in Chromium on a local page that imitates a Twitch VOD
-(8x for the test, sped up). Mid-run the test resets the player speed, pauses it like an
-ad, re-renders the chat and reloads the page. The script recovers from each one and
-finishes at 100% watched.</sub>
-
-The script fixes common problems without Claude's help: it re-applies the speed, resumes
-after pauses, reattaches to a re-rendered chat, saves progress across reloads, and goes
-back to fill any skipped parts. If the site changes its chat layout, it finds the chat
-on its own:
-
-![Auto-detecting an unknown chat layout on a mock Kick VOD](docs/autodetect.gif)
-<sub>Mock Kick page with obfuscated class names and distracting page updates. The chat
-is found a few seconds after start.</sub>
+<sub>Recorder tested in Chromium on a local page that imitates a Twitch VOD (8x, sped up).</sub>
 
 ## Install
 
-- **Claude app / claude.ai:** Settings → Capabilities → Skills → upload
-  [`dist/stream-clipper.zip`](dist/stream-clipper.zip).
-- **Claude Code:** copy the `stream-clipper` folder to `~/.claude/skills/`.
+1. Get [`dist/stream-clipper.zip`](dist/stream-clipper.zip).
+2. Install it:
+   - **Claude app / claude.ai:** Settings → Capabilities → Skills → Upload skill → pick
+     the zip (don't unzip it).
+   - **Claude Code:** unzip it into `~/.claude/skills/` so you have
+     `~/.claude/skills/stream-clipper/SKILL.md`.
+3. **Terminal mode** also needs `ffmpeg` and Python 3 on the machine. Optional extras:
+   `pip install yt-dlp` for Twitch video, and the **Descript** connector or
+   `pip install faster-whisper` for subtitles.
+4. **Chrome mode** needs the Claude in Chrome extension, installed and connected.
 
-You also need the Claude in Chrome extension installed
-and connected.
+Put your streamers in [`stream-clipper/streamers.md`](stream-clipper/streamers.md) so
+you can just say "clip my streamers".
 
-## Is it guaranteed to work?
+## Status
 
-It isn't guaranteed yet, and here is exactly where it stands:
-
-- ✅ **Tested:** the script passes 30 automated checks in real Chromium against mock
-  Twitch and Kick pages. They cover finding all four planted moments with the right
-  type, ranking funny above raid spam, 30-120 s lengths, 100% coverage, recovery from
-  speed reset, ad pause, chat re-render and page reload, and auto-detecting unknown
-  chat markup.
-- ⚠️ **Not tested yet:** the live twitch.tv and kick.com sites (the build machine
-  couldn't reach them). The usual first-run problem is one CSS selector, and
-  auto-detect is there to cover it.
-- ❌ **Limits:** jokes that only work by sound can be missed. Those are marked "needs a
-  listen", never guessed. VODs with no chat replay fall back to a slower visual pass.
-
-To confirm it on the real sites, do the 15-minute check in
-[`docs/FIRST-RUN.md`](docs/FIRST-RUN.md). It also lists every known risk and what
-handles it.
+- ✅ **Live-tested on Kick:** a 24-hour clavicular VOD. All the chat was read, 30
+  spikes were found and 7 were checked on video. Five clips were cut in 1080p60,
+  transcribed with Descript, and rendered as shorts and wide videos.
+- ✅ **Automated tests:**
+  - 30 browser checks of the Chrome recorder against mock Twitch and Kick pages
+    (`node tests/e2e.js`).
+  - 11 unit checks of scoring, subtitles and captions (`python3 tests/test_clipper.py`).
+- ⚠️ **Not live-tested yet:** Chrome mode on the real twitch.tv and kick.com, and Twitch
+  video through yt-dlp. See [`docs/FIRST-RUN.md`](docs/FIRST-RUN.md).
+- ❌ **Limits:** without a transcript, jokes that only work by sound can be missed.
+  Claude marks those "needs a listen" and never guesses. Twitch chat can only be read
+  through Chrome mode.
 
 ## Repo layout
 
 ```
-stream-clipper/            the skill (this folder is what gets installed)
-  SKILL.md                 step-by-step instructions for Claude
-  scripts/clip_recorder.js the in-page recorder + spike finder
-  references/              platform notes, how to judge a moment, report template
-  streamers.md             your streamer list
-dist/stream-clipper.zip    the skill packaged for upload
-tests/                     end-to-end test with mock Twitch/Kick pages
-docs/                      GIFs, first-run checklist
+stream-clipper/              the skill (what gets installed)
+  SKILL.md                   instructions for Claude
+  scripts/clipper.py         toolbox: info, chat, score, context, sheet, cut, audio, words, transcribe, render
+  scripts/clip_recorder.js   Chrome-mode recorder
+  references/                production steps, chrome mode, platforms, signals, report template
+  assets/fonts/              Montserrat (SIL Open Font License)
+  streamers.md               your streamer list
+dist/stream-clipper.zip      the skill packaged for upload
+clips/                       reports from real runs
+tests/                       unit tests + browser e2e test with mock pages
+docs/                        GIFs, first-run checklist
 ```
-
-Run the tests (needs Node, Playwright with Chromium, and ffmpeg):
-
-```
-node tests/e2e.js
-```
-
-## What's next
-
-Subtitles in a fun style and titles for each clip. See
-[`stream-clipper/references/next-steps.md`](stream-clipper/references/next-steps.md).

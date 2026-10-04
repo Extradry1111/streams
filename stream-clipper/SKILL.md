@@ -8,7 +8,7 @@ description: >-
   laughter and "clip it" in chat, cross-checks viewer clips, then looks at every candidate
   with screenshots and keeps the best. Use it whenever someone asks to find funny moments,
   highlights, clips, shorts or TikToks in a stream, VOD, past broadcast or stream recording,
-  or says "clip <streamer>" / "clip this VOD" for Twitch or Kick, in any language
+  or says "clip xqc" / "clip this VOD" for Twitch or Kick, in any language
   (клипы со стрима, нарезка, смешные моменты, хайлайты).
 ---
 

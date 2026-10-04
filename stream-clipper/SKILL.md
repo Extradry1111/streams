@@ -1,15 +1,6 @@
 ---
 name: stream-clipper
-description: >-
-  Finds the funniest moments in Twitch and Kick stream recordings (VODs) and returns
-  ready-to-cut clip candidates of 30-120 seconds with exact timecodes and links. Works
-  through the Claude in Chrome extension: opens the streamer's channel, picks the VOD,
-  plays the whole thing muted at 4x while recording the chat replay, finds the spikes of
-  laughter and "clip it" in chat, cross-checks viewer clips, then looks at every candidate
-  with screenshots and keeps the best. Use it whenever someone asks to find funny moments,
-  highlights, clips, shorts or TikToks in a stream, VOD, past broadcast or stream recording,
-  or says "clip xqc" / "clip this VOD" for Twitch or Kick, in any language
-  (клипы со стрима, нарезка, смешные моменты, хайлайты).
+description: Finds the funniest moments in Twitch and Kick stream recordings (VODs) and returns ready-to-cut clip candidates of 30-120 seconds with exact timecodes and links. Works through the Claude in Chrome extension. It opens the streamer's channel, picks the VOD, plays the whole thing muted at 4x while recording the chat replay, finds the spikes of laughter and 'clip it' in chat, cross-checks viewer clips, then looks at every candidate with screenshots and keeps the best. Use it whenever someone asks to find funny moments, highlights, clips, shorts or TikToks in a stream, VOD, past broadcast or stream recording, or says 'clip xqc' / 'clip this VOD' for Twitch or Kick, in any language (клипы со стрима, нарезка, смешные моменты, хайлайты).
 ---
 
 # stream-clipper

@@ -28,7 +28,12 @@ What you get back:
    - `NN-name-short.mp4`: 1080×1920 for TikTok, Shorts and Reels. Blurred background,
      the action in the middle, a hook title on top, captions in yellow word by word.
    - `NN-name-wide.mp4`: 1920×1080 for YouTube or X, with captions at the bottom.
-   - Post titles and hashtags.
+   - Post text for each video: name, description and TikTok hashtags, plus a YouTube
+     title and description.
+
+Five caption styles, so each creator's channel can have its own look:
+
+![classic, beast, neon, minimal, comic](docs/caption-styles.jpg)
 
 Swear words are masked in the captions (F*CK) so TikTok doesn't limit the clip. The
 audio isn't changed. Lines that could get a clip taken down are trimmed, and Claude tells

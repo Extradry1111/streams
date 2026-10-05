@@ -377,32 +377,68 @@ def censor(word):
     return SWEARS.sub(lambda m: m.group(0)[0] + re.sub(r'[aeiouy]', '*', m.group(0)[1:], count=1, flags=re.I), word)
 
 
-def build_ass(words, W, H, fmt, title=None, highlight='&H004DE1FF&', upper=True, clean=True):
+# Caption looks. Colours are ASS &HAABBGGRR. size/wide = font height as a share of the
+# frame width for shorts / wide videos; ow = outline width divisor (smaller = thicker).
+STYLES = {
+    'classic': dict(desc='white bold caps, yellow word highlight, white title box',
+                    font='Montserrat Black', size=0.085, wide=0.042, text='&H00FFFFFF', hi='&H004DE1FF',
+                    outline='&H00000000', ow=11, blur=0, box=False, upper=True, words=3, pop=112, tilt=0,
+                    title_text='&H00000000', title_box='&H00FFFFFF'),
+    'beast': dict(desc='huge 1-2 word caps, green highlight, big bounce, red title box',
+                  font='Montserrat Black', size=0.105, wide=0.052, text='&H00FFFFFF', hi='&H005AFF3C',
+                  outline='&H00000000', ow=8, blur=0, box=False, upper=True, words=2, pop=125, tilt=0,
+                  title_text='&H00FFFFFF', title_box='&H003B3BE6'),
+    'neon': dict(desc='white caps with cyan glow, pink highlight, black title with cyan text',
+                 font='Montserrat Black', size=0.08, wide=0.04, text='&H00FFFFFF', hi='&H00A53EFF',
+                 outline='&H00FFE83E', ow=14, blur=5, box=False, upper=True, words=3, pop=110, tilt=0,
+                 title_text='&H00FFE83E', title_box='&H00000000'),
+    'minimal': dict(desc='clean sentence case on a soft dark box, up to 5 words, podcast look',
+                    font='Montserrat ExtraBold', size=0.066, wide=0.036, text='&H00FFFFFF', hi='&H00FFFFFF',
+                    outline='&H80000000', ow=4, blur=0, box=True, upper=False, words=5, pop=100, tilt=0,
+                    title_text='&H00FFFFFF', title_box='&H99000000'),
+    'comic': dict(desc='yellow caps, thick outline, white highlight, tilted, yellow title box',
+                  font='Montserrat Black', size=0.09, wide=0.045, text='&H0000E6FF', hi='&H00FFFFFF',
+                  outline='&H00000000', ow=7, blur=0, box=False, upper=True, words=3, pop=118, tilt=-3,
+                  title_text='&H00000000', title_box='&H0000E6FF'),
+}
+
+
+def build_ass(words, W, H, fmt, title=None, style='classic', clean=True):
+    st = STYLES[style]
     short = fmt == 'short'
-    size = round(W * (0.085 if short else 0.042))
+    size = round(W * (st['size'] if short else st['wide']))
     y = round(H * (0.745 if short else 0.86))
+    border = (3, max(6, size // st['ow'])) if st['box'] else (1, max(3, size // st['ow']))
     lines = [
         '[Script Info]', 'ScriptType: v4.00+', f'PlayResX: {W}', f'PlayResY: {H}', 'WrapStyle: 0', 'ScaledBorderAndShadow: yes', '',
         '[V4+ Styles]',
         'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
         'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-        f'Style: Cap,Montserrat Black,{size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H90000000,0,0,0,0,100,100,0,0,1,{max(4, size // 11)},{max(2, size // 22)},5,60,60,0,1',
-        f'Style: Title,Montserrat Black,{round(W * 0.062)},&H00000000,&H00000000,&H00FFFFFF,&H00FFFFFF,0,0,0,0,100,100,0,0,3,{round(W * 0.018)},0,8,70,70,{round(H * 0.085)},1',
+        f"Style: Cap,{st['font']},{size},{st['text']},{st['text']},{st['outline']},&H90000000,0,0,0,0,100,100,0,0,{border[0]},{border[1]},{0 if st['box'] else max(2, size // 22)},5,60,60,0,1",
+        f"Style: Title,Montserrat Black,{round(W * 0.062)},{st['title_text']},{st['title_text']},{st['title_box']},{st['title_box']},0,0,0,0,100,100,0,0,3,{round(W * 0.018)},0,8,70,70,{round(H * 0.085)},1",
         '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     ]
     if title and short:
         lines.append(f'Dialogue: 2,{_ass_time(0)},{_ass_time(10 ** 5)},Title,,0,0,0,,{_esc(title.upper())}')
-    for ch in _chunks(words, 3 if short else 6, 16 if short else 40):
+    extra = f"\\frz{st['tilt']}" if st['tilt'] else ''
+    for ch in _chunks(words, st['words'] if short else max(6, st['words']), 16 if short and st['words'] <= 3 else 40):
         for i, w in enumerate(ch):
             s = w['s']
             e = ch[i + 1]['s'] if i + 1 < len(ch) else max(w['e'], s + 0.25)
             parts = []
             for j, x in enumerate(ch):
-                t = _esc(x['w'].upper() if upper else x['w'])
+                t = _esc(x['w'].upper() if st['upper'] else x['w'])
                 t = censor(t) if clean else t
-                parts.append(f'{{\\c{highlight}\\fscx112\\fscy112}}{t}{{\\c&H00FFFFFF&\\fscx100\\fscy100}}' if j == i else t)
-            pop = '\\t(0,80,\\fscx105\\fscy105)' if i == 0 else ''
-            lines.append(f'Dialogue: 1,{_ass_time(s)},{_ass_time(e)},Cap,,0,0,0,,{{\\pos({W // 2},{y}){pop}}}' + ' '.join(parts))
+                if j == i and (st['hi'] != st['text'] or st['pop'] != 100):
+                    t = f"{{\\c{st['hi']}\\fscx{st['pop']}\\fscy{st['pop']}}}{t}{{\\c{st['text']}\\fscx100\\fscy100}}"
+                parts.append(t)
+            pop = '\\t(0,80,\\fscx105\\fscy105)' if i == 0 and st['pop'] > 100 else ''
+            line = ' '.join(parts)
+            if st['blur']:  # glow: blurred coloured outline underneath, crisp text with a thin dark edge on top
+                lines.append(f"Dialogue: 0,{_ass_time(s)},{_ass_time(e)},Cap,,0,0,0,,{{\\pos({W // 2},{y})\\1a&HFF&\\bord{border[1] * 2}\\blur{st['blur'] * 2}{pop}}}" + line)
+                lines.append(f"Dialogue: 1,{_ass_time(s)},{_ass_time(e)},Cap,,0,0,0,,{{\\pos({W // 2},{y})\\3c&H00200010&\\bord{max(2, border[1] // 2)}{pop}}}" + line)
+            else:
+                lines.append(f'Dialogue: 1,{_ass_time(s)},{_ass_time(e)},Cap,,0,0,0,,{{\\pos({W // 2},{y}){extra}{pop}}}' + line)
     return '\n'.join(lines) + '\n'
 
 
@@ -417,7 +453,7 @@ def cmd_render(a):
     W, H = (1080, 1920) if short else (1920, 1080)
     with tempfile.TemporaryDirectory() as tmp:
         ass = os.path.join(tmp, 'subs.ass')
-        open(ass, 'w', encoding='utf8').write(build_ass(words, W, H, a.format, a.title, clean=not a.no_censor))
+        open(ass, 'w', encoding='utf8').write(build_ass(words, W, H, a.format, a.title, style=a.style, clean=not a.no_censor))
         subs = f"subtitles={ass}:fontsdir={os.path.abspath(FONTS)}"
         if short:
             # blurred full-bleed background + the action in the middle, cropped to 4:3 so it stays big
@@ -461,6 +497,7 @@ def main():
     s.add_argument('--no-censor', action='store_true', help='show swear words uncensored in captions')
     s.add_argument('--trim', nargs=2, metavar=('START', 'END'), help='use only this part of the clip (clip-relative times)')
     s.add_argument('--preset', default='medium')
+    s.add_argument('--style', choices=sorted(STYLES), default='classic', help='caption look: ' + '; '.join(f'{k}: {v["desc"]}' for k, v in STYLES.items()))
     s.add_argument('--fps', type=int, default=30); s.add_argument('--crf', type=int, default=19)
     s.add_argument('--max-mb', type=float, help='target file size, e.g. 29 to fit a 30 MB upload limit'); s.set_defaults(f=cmd_render)
     a = p.parse_args()

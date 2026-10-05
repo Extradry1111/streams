@@ -48,9 +48,15 @@ clipper.py render hd/01.mp4 subs/01.words.json out/01-wide.mp4  --format wide
 - `short`: 1080×1920 for TikTok/Shorts/Reels. Blurred full-bleed background, the action
   cropped to 4:3 in the middle, hook title in a white box on top, captions below the video.
 - `wide`: 1920×1080 for YouTube/X, captions at the bottom.
-- Captions: Montserrat Black, uppercase, 1-3 words at a time (shorts), the spoken word
-  in yellow with a small pop. Swear words are masked (F*CK) unless `--no-censor`; the
-  audio is never changed.
+- `--style` picks the caption look (preview: `docs/caption-styles.jpg` in the repo):
+  - `classic`: white bold caps, yellow word highlight, white title box (default).
+  - `beast`: huge 1-2 word caps, green highlight, big bounce, red title box.
+  - `neon`: white caps with a cyan glow, pink highlight, black title with cyan text.
+  - `minimal`: clean sentence case on a soft dark box, up to 5 words (podcasts, talk).
+  - `comic`: yellow caps, thick outline, white highlight, slight tilt, yellow title box.
+  Use the style the user or the chat was set up with, the same for every clip of a
+  creator, so their channel looks consistent.
+- Swear words are masked (F*CK) unless `--no-censor`; the audio is never changed.
 - `--trim START END` (times inside the clip) to drop a bad line or dead air.
 - `--max-mb 29` when the file has to fit an upload limit (e.g. sending in chat, 30 MB);
   otherwise quality-based (`--crf 19`). `--preset fast` renders ~2× quicker.
@@ -59,17 +65,36 @@ Check one frame of each render (mid-sentence) before delivering: caption readabl
 not cut off, nothing important cropped out of the 4:3 window. If the action happens at
 the edges of the frame, use `--format wide` for that clip and say why.
 
-## 4. Titles
+## 4. Post text (name, description, hashtags)
 
-For each clip write:
-- the **hook** burned into the short (`--title`): max ~8 words, uppercase, curiosity
-  without spoiling the payoff ("He was explaining jaw surgery... then this happened");
-- **3 post titles** per platform (TikTok, YouTube Shorts, YouTube/X wide), in the
-  audience's language, plus 3-5 hashtags (streamer name, platform, topic).
-No emoji inside the burned-in title (the font has none); emoji are fine in post titles.
+For every clip write a `NN-slug.post.md` next to the videos, ready to copy-paste:
+
+```
+# 01 · <short name of the clip>
+
+## TikTok
+Caption: <hook line, max ~100 characters, can use 1-2 emoji>
+Hashtags: #creator #platform #topic #niche #fyp   (5-8 tags, most specific first)
+
+## YouTube Shorts
+Title: <max 70 characters, no clickbait lies>
+Description: <1-2 sentences: who, where, what happens, without spoiling the payoff>
+  + "From <creator>'s stream on <platform>, <date>."
+Hashtags: #shorts #creator #topic
+
+## YouTube / X (wide)
+Title: <max 70 characters>
+Description: <2-3 sentences + source line>
+```
+
+Rules: the burned-in hook (`--title`) is max ~8 words, uppercase, no emoji (the font has
+none). Write in the audience's language. Tags: creator name, platform (#kick/#twitch),
+what happens (#fail, #rizz, #prank…), the community (#looksmax…), then 1-2 broad tags
+(#fyp, #streamclips). Never put slurs or the censored words back into post text. Also
+collect all post files into one `posts.md` for the user.
 
 ## 5. Deliver
 
 - Send files if the channel allows (respect size limits; `--max-mb`), otherwise give
   paths. Order: shorts first, then wide.
-- A table: file, length, hook, post titles, anything trimmed and why.
+- A table: file, length, hook, anything trimmed and why, plus `posts.md`.

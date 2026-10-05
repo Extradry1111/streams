@@ -27,8 +27,8 @@ Neither available → explain what's needed (README → Install) and stop.
   finished VOD from the channel's videos page. No streamer named → `streamers.md`; if
   empty, ask once. "clip my streamers" → each streamer in `streamers.md` in turn.
 - Defaults unless the user says otherwise: up to 5 finished clips (report up to 10
-  candidates), 30-120 s, both formats, captions in the stream's language, report in the
-  user's language.
+  candidates), 30-120 s, both formats, `classic` caption style unless this chat or the user set
+  another, captions in the stream's language, report in the user's language.
 
 ## Toolbox mode
 
@@ -72,9 +72,11 @@ Follow `references/production.md`:
 4. Transcribe: faster-whisper, else the **Descript connector** (audio upload → SRT →
    `words`). Read the transcripts: they explain what happened and reveal lines that need
    trimming.
-5. `render` each clip twice: `--format short --title "<hook>"` and `--format wide`.
-   Look at one frame of each before delivering.
-6. Write hooks and post titles; deliver files + a table.
+5. `render` each clip twice: `--format short --title "<hook>"` and `--format wide`,
+   both with the creator's `--style` (classic, beast, neon, minimal, comic). Look at one
+   frame of each before delivering.
+6. Write the post text for every clip (name, description, TikTok hashtags, YouTube
+   title and description) and deliver files + `posts.md` + a table.
 
 ## Rules
 

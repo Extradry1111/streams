@@ -5,7 +5,7 @@ Needs Python 3.9+, curl and ffmpeg (with libass). Optional: yt-dlp (Twitch VODs)
 faster-whisper (local transcription). Run any command with -h for options.
 
   info URL                         VOD facts -> vod.json (Kick native, Twitch via yt-dlp)
-  chat vod.json                    full Kick chat replay -> chat.json
+  chat vod.json                    full chat replay (Kick or Twitch) -> chat.json
   score chat.json                  chat spikes -> candidates.json (same scoring as clip_recorder.js)
   context chat.json START END      chat lines in a window, to see what people laughed at
   sheet vod.json START END OUT.jpg 12 frames of a window on one image (visual check)
@@ -117,10 +117,64 @@ def _ts(s):
     return datetime.fromisoformat(s.replace('Z', '+00:00')).timestamp()
 
 
+TWITCH_GQL_CLIENT = 'kd1unb4b3q4t58fwlpcbzcbnm76a8fp'  # public web client id
+TWITCH_COMMENTS_HASH = 'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a'
+
+
+def _twitch_comments(video_id, variables, tries=8):
+    body = json.dumps([{'operationName': 'VideoCommentsByOffsetOrCursor',
+                        'variables': {'videoID': video_id, **variables},
+                        'extensions': {'persistedQuery': {'version': 1, 'sha256Hash': TWITCH_COMMENTS_HASH}}}]).encode()
+    for i in range(tries):
+        try:
+            req = urllib.request.Request('https://gql.twitch.tv/gql', data=body, headers={
+                'Client-Id': TWITCH_GQL_CLIENT, 'Content-Type': 'application/json', 'User-Agent': UA})
+            with urllib.request.urlopen(req, context=_ctx(), timeout=60) as r:
+                return json.loads(r.read())[0]['data']['video']['comments']
+        except Exception:
+            if i == tries - 1:
+                raise
+            time.sleep(1 + i)
+
+
+def _twitch_chat(vod, a):
+    vid, dur = vod['id'].lstrip('v'), vod['duration']
+
+    def slice_(i):
+        lo, hi = i * a.slice, min(dur + 1, (i + 1) * a.slice)
+        out, c = {}, _twitch_comments(vid, {'contentOffsetSeconds': lo})
+        while True:
+            edges = c.get('edges') or []
+            for e in edges:
+                n = e['node']
+                t = n['contentOffsetSeconds']
+                if lo <= t < hi:
+                    text = ''.join(f.get('text') or '' for f in (n.get('message') or {}).get('fragments') or [])
+                    out[n['id']] = (float(t), (n.get('commenter') or {}).get('login') or '?', text)
+            last = edges[-1]['node']['contentOffsetSeconds'] if edges else hi
+            if not edges or last >= hi or not c.get('pageInfo', {}).get('hasNextPage'):
+                break
+            c = _twitch_comments(vid, {'cursor': edges[-1]['cursor']})
+        return i, list(out.values())
+
+    return slice_
+
+
 def cmd_chat(a):
     vod = json.load(open(a.vod))
+    if vod['platform'] == 'twitch':
+        slice_ = _twitch_chat(vod, a)
+        n, msgs = math.ceil(vod['duration'] / a.slice), []
+        with cf.ThreadPoolExecutor(a.workers) as ex:
+            for i, ms in ex.map(slice_, range(n)):
+                msgs += ms
+                print(f'  {tc(i * a.slice)}  +{len(ms)} msgs', file=sys.stderr, flush=True)
+        msgs.sort()
+        json.dump(msgs, open(a.out, 'w'))
+        print(f'{len(msgs)} messages -> {a.out}')
+        return
     if vod['platform'] != 'kick':
-        sys.exit('Offline chat download is Kick-only. For Twitch use clip_recorder.js in Chrome.')
+        sys.exit('Offline chat download supports Kick and Twitch VODs.')
     start, dur, ch = _ts(vod['start_time']), vod['duration'], vod['channel_id']
 
     def slice_(i):

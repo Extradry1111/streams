@@ -60,7 +60,7 @@ which you can also run yourself (`python3 clipper.py -h`).
 | Where | Claude Code, or a Claude session with a terminal | Claude app / claude.ai + Claude in Chrome |
 | Finds moments | ✅ from the downloaded chat | ✅ plays the VOD at 4x in your browser and records chat |
 | Cuts clips, subtitles, shorts | ✅ | ❌ gives timecodes, then you finish in terminal mode |
-| Twitch | video ✅ (needs `yt-dlp`), chat via Chrome mode | ✅ |
+| Twitch | video ✅ (needs `yt-dlp`), chat ✅ | ✅ |
 | Kick | ✅ end to end | ✅ |
 
 Chrome mode uses [`clip_recorder.js`](stream-clipper/scripts/clip_recorder.js). It plays
@@ -95,11 +95,10 @@ you can just say "clip my streamers".
   - 30 browser checks of the Chrome recorder against mock Twitch and Kick pages
     (`node tests/e2e.js`).
   - 11 unit checks of scoring, subtitles and captions (`python3 tests/test_clipper.py`).
-- ⚠️ **Not live-tested yet:** Chrome mode on the real twitch.tv and kick.com, and Twitch
-  video through yt-dlp. See [`docs/FIRST-RUN.md`](docs/FIRST-RUN.md).
+- ⚠️ **Not live-tested yet:** Chrome mode on the real twitch.tv and kick.com.
+  (Twitch video via yt-dlp and Twitch chat download were used on a real VOD, rasmrr Sep 25 2026.) See [`docs/FIRST-RUN.md`](docs/FIRST-RUN.md).
 - ❌ **Limits:** without a transcript, jokes that only work by sound can be missed.
-  Claude marks those "needs a listen" and never guesses. Twitch chat can only be read
-  through Chrome mode.
+  Claude marks those "needs a listen" and never guesses.
 
 ## Repo layout
 

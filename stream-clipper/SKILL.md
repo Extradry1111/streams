@@ -15,7 +15,7 @@ streamer gets it within 5-10 seconds.
 
 - **Toolbox mode** (preferred): you can run shell commands (Claude Code, a cloud
   session). Uses `scripts/clipper.py` + ffmpeg. Does everything, including the finished
-  videos. Kick works end to end; Twitch needs `yt-dlp` for video and Chrome mode for chat.
+  videos. Kick and Twitch work end to end (Twitch video needs `yt-dlp`).
 - **Chrome mode**: no shell, but Claude in Chrome is connected. Finds and checks moments
   in the user's browser; can't cut or render. Follow `references/chrome-mode.md`.
 
@@ -44,8 +44,13 @@ python3 $C score chat.json         # -> candidates.json + ranked table
 
 `score` counts each chatter once per 5 s so spammers can't fake a spike, skips the first
 and last 5 minutes, and labels each window `funny` / `clip-call` / `hype`. How to read it:
-`references/signals.md`. Twitch chat can't be downloaded here: get candidates with Chrome
-mode, then continue at step 3.
+`references/signals.md`. Twitch chat comes from Twitch's public comments API (2 h VOD in ~5 s).
+
+Quiet or off-topic chat (tickers, "W" spam, score never above ~5, almost no laughs) means the
+chat signal is weak. Then transcribe the **whole VOD**: download audio only
+(`yt-dlp -f Audio_Only` on Twitch), downmix to mono 40 kbps, run it through Descript as one
+composition, export txt (timecodes every 30 s) and SRT, and pick moments from what is said.
+Per-clip subtitles can then be sliced from that SRT (same words, same timing).
 
 ### 2. Check every candidate before cutting anything
 

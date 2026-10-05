@@ -152,7 +152,7 @@ def cmd_chat(a):
 
 
 # ---------------------------------------------------------------- scoring (port of clip_recorder.js)
-LAUGH = re.compile(r'(KEKW|OMEGALUL|LULW?|LMAO|LMFAO|ROFL|\bLOL\b|ICANT|\bxd+\b|pepeLaugh|KEKL|HaHaa|emojiDead|emojiLol|emojiRofl|\b(?:ha){2,}|\b(?:ah){2,}|😂|🤣|💀)', re.I)
+LAUGH = re.compile(r'(KEKW|OMEGALUL|LULW?|LMAO|LMFAO|ROFL|\bLOL\b|ICANT|\bxd+\b|pepeLaugh|KEKL|HaHaa|emojiDead|emojiLol|emojiRofl|\b(?:ha){2,}|\b(?:ah){2,}|😂|🤣|💀|\){2,})', re.I)
 LAUGH_RU = re.compile(r'(?<![а-яё])(а?(?:ха){2,}х?|а?(?:хах)+|(?:ах){2,}а?|п+х+[ах]*|ору+|орнул\S*|ржу|ржака|угар|азаз\S*)(?![а-яё])', re.I)
 CLIP = re.compile(r'(\bclip\b|clip it|clipped|клип|клипни|в клипы|момент)', re.I)
 HYPE = re.compile(r'(\bW+\b|POGGERS|\bPog\b|PogChamp|monkaS|\bWTF\b|\bOMG\b|\?{3,}|!{3,})')
@@ -256,9 +256,12 @@ def _variant(master_url, height):
 
 def _segments(vod, height):
     url, base = _variant(vod['m3u8'], height)
+    pl = http(url).decode()
     segs, t = [], 0.0
-    for d, name in re.findall(r'#EXTINF:([\d.]+),[^\n]*\n(?:#[^\n]*\n)*(\S+)', http(url).decode()):
+    for d, name in re.findall(r'#EXTINF:([\d.]+),[^\n]*\n(?:#[^\n]*\n)*(\S+)', pl):
         segs.append((t, float(d), name if name.startswith('http') else base + name)); t += float(d)
+    m = re.search(r'#EXT-X-MAP:URI="([^"]+)"', pl)  # fragmented MP4 (Twitch): segments need the init segment
+    _segments.init = (m.group(1) if m.group(1).startswith('http') else base + m.group(1)) if m else None
     return segs
 
 
@@ -266,7 +269,16 @@ def _fetch_window(vod, t0, t1, height, tmp):
     segs = [s for s in _segments(vod, height) if s[0] + s[1] > t0 and s[0] < t1]
     files = []
     with cf.ThreadPoolExecutor(6) as ex:
-        for i, data in enumerate(ex.map(lambda s: http(s[2]), segs)):
+        datas = list(ex.map(lambda s: http(s[2]), segs))
+    if _segments.init:  # fMP4: one file = init + fragments
+        f = os.path.join(tmp, 'all.mp4')
+        with open(f, 'wb') as o:
+            o.write(http(_segments.init))
+            for data in datas:
+                o.write(data)
+        files.append(f)
+    else:
+        for i, data in enumerate(datas):
             f = os.path.join(tmp, f'{i:05d}.ts'); open(f, 'wb').write(data); files.append(f)
     lst = os.path.join(tmp, 'list.txt')
     open(lst, 'w').writelines(f"file '{f}'\n" for f in files)
@@ -369,12 +381,25 @@ def _esc(s):
     return s.replace('\\', '').replace('{', '(').replace('}', ')')
 
 
-SWEARS = re.compile(r'(fuck|shit|bitch|pussy|cunt|dick|nigg\w*|fag\w*)', re.I)
+SWEARS = re.compile(r'(fuck|shit|bitch|pussy|cunt|dick|nigg\w*|fag\w*'
+                    # Russian mat: roots of х*й, п*зда, е*ать, бл*дь, с*ка, м*дак, ш*юха
+                    r'|[а-яё]*ху[йеёяию][а-яё]*|[а-яё]*пизд[а-яё]*|[а-яё]*долбо[её]б[а-яё]*'
+                    r'|(?<![а-яё])(?:вы|за|от|по|на|у|съ|подъ|разъ|при|до|об|въ|не|из|про)?[её]б[а-яё]*'
+                    r'|(?<![а-яё])бля[а-яё]*|(?<![а-яё])сук[аиуе]?(?![а-яё])|(?<![а-яё])муда[а-яё]*|(?<![а-яё])шлюх[а-яё]*)', re.I)
 
 
 def censor(word):
     # keep first letter of the swear, star the first vowel: F*CK, MOTHERF*CKER, SH*T
-    return SWEARS.sub(lambda m: m.group(0)[0] + re.sub(r'[aeiouy]', '*', m.group(0)[1:], count=1, flags=re.I), word)
+    def mask(m):
+        w = m.group(0)
+        if re.search(r'[а-яё]', w, re.I):  # Russian: star the vowel inside the root (НАХ*Й, ЗА*БАЛ, БЛ*ДЬ)
+            for root, rep in ((r'(ху)(?=[йеёяию])', 'х*'), (r'пизд', 'п*зд'), (r'[её](?=б)', '*'), (r'бля', 'бл*'),
+                              (r'сук', 'с*к'), (r'муда', 'м*да'), (r'шлюх', 'шл*х')):
+                w, n = re.subn(root, lambda r: rep if r.group(0).islower() else rep.upper(), w, count=1, flags=re.I)
+                if n:
+                    return w
+        return w[0] + re.sub(r'[aeiouy]', '*', w[1:], count=1, flags=re.I)
+    return SWEARS.sub(mask, word)
 
 
 # Caption looks. Colours are ASS &HAABBGGRR. size/wide = font height as a share of the
@@ -457,11 +482,15 @@ def cmd_render(a):
         subs = f"subtitles={ass}:fontsdir={os.path.abspath(FONTS)}"
         if short:
             # blurred full-bleed background + the action in the middle, cropped to 4:3 so it stays big
-            fg_h = round(W * 3 / 4)
+            # (--fg 16:9 keeps the whole frame, for layouts with webcams or text at the edges)
+            full = a.fg == '16:9'
+            fg_h = round(W * 9 / 16) // 2 * 2 if full else round(W * 3 / 4)
             vf = (f"[0:v]split[a][b];[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},gblur=sigma=10,eq=brightness=-0.12,scale={W}:{H}[bg];"
-                  f"[b]crop=ih*4/3:ih,scale={W}:{fg_h}[fg];[bg][fg]overlay=0:(H-h)/2-{round(H * 0.04)},{subs},fps={a.fps},format=yuv420p[v]")
+                  f"[b]{'' if full else 'crop=ih*4/3:ih,'}scale={W}:{fg_h}[fg];[bg][fg]overlay=0:(H-h)/2-{round(H * 0.04)},{subs},fps={a.fps},format=yuv420p[v]")
         else:
             vf = f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease,pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,{subs},fps={a.fps},format=yuv420p[v]"
+        if a.crop:  # zoom into part of the frame first (e.g. a webcam), as W:H:X:Y in source pixels
+            vf = vf.replace('[0:v]', f'[0:v]crop={a.crop},', 1)
         enc = ['-c:v', 'libx264', '-preset', a.preset, '-profile:v', 'high']
         if a.max_mb:
             kbps = max(800, int((a.max_mb * 8 * 1000 / dur - 128) * 0.95))
@@ -494,6 +523,8 @@ def main():
     s.add_argument('--lang'); s.set_defaults(f=cmd_transcribe)
     s = sp.add_parser('render'); s.add_argument('inp'); s.add_argument('words'); s.add_argument('out')
     s.add_argument('--format', choices=['short', 'wide'], default='short'); s.add_argument('--title', help='hook text on top of a short')
+    s.add_argument('--crop', metavar='W:H:X:Y', help='crop the source before laying it out, e.g. 624:351:0:0 for a corner webcam')
+    s.add_argument('--fg', choices=['4:3', '16:9'], default='4:3', help='short: crop the video to 4:3 (default) or keep the whole 16:9 frame')
     s.add_argument('--no-censor', action='store_true', help='show swear words uncensored in captions')
     s.add_argument('--trim', nargs=2, metavar=('START', 'END'), help='use only this part of the clip (clip-relative times)')
     s.add_argument('--preset', default='medium')

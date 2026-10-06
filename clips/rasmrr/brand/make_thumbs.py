@@ -1,6 +1,6 @@
 """Thumbnails for the rasmrr clips: 1280x720 (wide / YouTube) and 1080x1920 (Shorts / TikTok cover).
 
-Usage: python3 make_thumbs.py HD_DIR OUT_DIR   (HD_DIR holds the 1080p cuts NN-slug.mp4; needs ffmpeg + Pillow)
+Usage: python3 make_thumbs.py HD_DIR OUT_DIR [--clips clips.json] [--short-only]   (HD_DIR holds the 1080p cuts NN-slug.mp4; needs ffmpeg + Pillow)
 """
 import os
 import subprocess
@@ -127,11 +127,18 @@ def short_cover(frame, w_line, g_line, out):
 
 
 if __name__ == '__main__':
-    hd, out = sys.argv[1], sys.argv[2]
-    os.makedirs(out, exist_ok=True)
-    for slug, t, w_line, g_line in CLIPS:
-        frame = grab(os.path.join(hd, slug + '.mp4'), t, os.path.join(out, f'.{slug}.png'))
-        wide_thumb(frame, w_line, g_line, os.path.join(out, f'{slug}-thumb-wide.jpg'))
-        short_cover(frame, w_line, g_line, os.path.join(out, f'{slug}-cover-short.jpg'))
-        os.remove(os.path.join(out, f'.{slug}.png'))
+    import argparse, json
+    ap = argparse.ArgumentParser()
+    ap.add_argument('hd'); ap.add_argument('out')
+    ap.add_argument('--clips', help='JSON list of [slug, second, white line, green line] (default: CLIPS above)')
+    ap.add_argument('--short-only', action='store_true', help='only the 1080x1920 phone covers')
+    a = ap.parse_args()
+    os.makedirs(a.out, exist_ok=True)
+    for slug, t, w_line, g_line in (json.load(open(a.clips)) if a.clips else CLIPS):
+        tmp = os.path.join(a.out, f'.{slug}.png')
+        frame = grab(os.path.join(a.hd, slug + '.mp4'), t, tmp)
+        if not a.short_only:
+            wide_thumb(frame, w_line, g_line, os.path.join(a.out, f'{slug}-thumb-wide.jpg'))
+        short_cover(frame, w_line, g_line, os.path.join(a.out, f'{slug}-cover-short.jpg'))
+        os.remove(tmp)
         print(slug)

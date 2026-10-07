@@ -75,7 +75,7 @@ Follow `references/production.md`:
 5. `render` each clip twice: `--format short --title "<hook>"` and `--format wide`,
    both with the creator's `--style` (classic, beast, neon, minimal, comic). Look at one
    frame of each before delivering.
-6. Write the post text for every clip (name, description, TikTok hashtags, YouTube
+6. Make a cover per short (`cover`), write the post text for every clip (name, description, TikTok hashtags, YouTube
    title and description) and deliver files + `posts.md` + a table.
 
 ## Rules

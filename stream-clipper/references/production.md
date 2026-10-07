@@ -65,6 +65,17 @@ Check one frame of each render (mid-sentence) before delivering: caption readabl
 not cut off, nothing important cropped out of the 4:3 window. If the action happens at
 the edges of the frame, use `--format wide` for that clip and say why.
 
+## 3b. Preview (cover) for each short
+
+```
+clipper.py cover hd/01.mp4 8 "His mugshot was *AI* the whole time" covers/01.jpg --logo logo.png
+```
+
+1080×1920 TikTok cover: the frame at that time in the short's layout, the hook in big
+caps (`*word*` turns yellow), optional round logo badge. Pick the frame from a strip of
+8 frames across the clip: a face reacting or the key object, never a blurry transition.
+Send all covers plus one grid of them so the user can compare at a glance.
+
 ## 4. Post text (name, description, hashtags)
 
 For every clip write a `NN-slug.post.md` next to the videos, ready to copy-paste:

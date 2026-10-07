@@ -14,6 +14,7 @@ faster-whisper (local transcription). Run any command with -h for options.
   words IN.srt OUT.json            SRT (e.g. from Descript) -> word timings
   transcribe IN.mp4 OUT.json       word timings with faster-whisper, if installed
   render IN.mp4 WORDS.json OUT.mp4 --format short|wide  burned-in TikTok-style captions
+  cover IN.mp4 TIME "HOOK *word*" OUT.jpg [--logo L]     TikTok cover / preview image
 
 Times are VOD seconds or H:MM:SS.
 """
@@ -473,6 +474,36 @@ def cmd_render(a):
     print(a.out, f'{os.path.getsize(a.out) / 1e6:.1f} MB')
 
 
+def cmd_cover(a):
+    """TikTok cover: one frame in the short layout, big hook (*word* = yellow), optional round logo badge."""
+    W, H = 1080, 1920
+    hook = re.sub(r'\*([^*]+)\*', r'{\\c&H004DE1FF&}\1{\\c&H00FFFFFF&}', _esc(a.hook.upper()).replace('(', '(')) if False else \
+        re.sub(r'\*([^*]+)\*', lambda m: '{\\c&H004DE1FF&}' + m.group(1) + '{\\c&H00FFFFFF&}', a.hook.upper().replace('{', '(').replace('}', ')'))
+    with tempfile.TemporaryDirectory() as tmp:
+        ass = os.path.join(tmp, 'c.ass')
+        open(ass, 'w', encoding='utf8').write('\n'.join([
+            '[Script Info]', 'ScriptType: v4.00+', f'PlayResX: {W}', f'PlayResY: {H}', 'WrapStyle: 0', 'ScaledBorderAndShadow: yes', '',
+            '[V4+ Styles]',
+            'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
+            'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+            'Style: Hook,Montserrat Black,104,&H00FFFFFF,&H00FFFFFF,&H00000000,&H90000000,0,0,0,0,100,100,0,0,1,9,4,5,70,70,0,1',
+            '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+            f'Dialogue: 1,0:00:00.00,0:00:10.00,Hook,,0,0,0,,{{\\pos({W // 2},{int(H * 0.79)})}}{hook}', '']))
+        fg = (f"[0:v]split[a][b];[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},gblur=sigma=10,"
+              f"eq=brightness=-0.15,scale={W}:{H}[bg];[b]crop=ih*4/3:ih,scale={W}:{W * 3 // 4},drawbox=x=0:y=0:w=iw:h=ih:color=0xFFE14D:t=10[fg];"
+              f"[bg][fg]overlay=0:{int(H * 0.17)}[v1];")
+        ins = ['-ss', str(secs(a.time)), '-i', a.inp]
+        if a.logo:
+            ins += ['-i', a.logo]
+            fg += ("[1:v]scale=220:220,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(hypot(X-110,Y-110),110),255,0)'[lg];"
+                   f"[v1][lg]overlay=(W-w)/2:{int(H * 0.035)}[v2];[v2]")
+        else:
+            fg += '[v1]'
+        fg += f"subtitles={ass}:fontsdir={os.path.abspath(FONTS)}[v]"
+        ff(*ins, '-filter_complex', fg, '-map', '[v]', '-frames:v', '1', '-q:v', '2', a.out)
+    print(a.out)
+
+
 # ---------------------------------------------------------------- cli
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -500,6 +531,8 @@ def main():
     s.add_argument('--style', choices=sorted(STYLES), default='classic', help='caption look: ' + '; '.join(f'{k}: {v["desc"]}' for k, v in STYLES.items()))
     s.add_argument('--fps', type=int, default=30); s.add_argument('--crf', type=int, default=19)
     s.add_argument('--max-mb', type=float, help='target file size, e.g. 29 to fit a 30 MB upload limit'); s.set_defaults(f=cmd_render)
+    s = sp.add_parser('cover'); s.add_argument('inp'); s.add_argument('time'); s.add_argument('hook', help='*word* is highlighted'); s.add_argument('out')
+    s.add_argument('--logo', help='square logo image, shown as a round badge'); s.set_defaults(f=cmd_cover)
     a = p.parse_args()
     a.f(a)
 

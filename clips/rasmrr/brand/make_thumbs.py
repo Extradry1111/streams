@@ -1,6 +1,7 @@
 """Thumbnails for the rasmrr clips: 1280x720 (wide / YouTube) and 1080x1920 (Shorts / TikTok cover).
 
-Usage: python3 make_thumbs.py HD_DIR OUT_DIR [--clips clips.json] [--short-only]   (HD_DIR holds the 1080p cuts NN-slug.mp4; needs ffmpeg + Pillow)
+Usage: python3 make_thumbs.py HD_DIR OUT_DIR [--clips clips.json] [--short-only]
+clips.json rows: [slug, second, white line, green line, optional face x 0-1]   (HD_DIR holds the 1080p cuts NN-slug.mp4; needs ffmpeg + Pillow)
 """
 import os
 import subprocess
@@ -134,7 +135,9 @@ if __name__ == '__main__':
     ap.add_argument('--short-only', action='store_true', help='only the 1080x1920 phone covers')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
-    for slug, t, w_line, g_line in (json.load(open(a.clips)) if a.clips else CLIPS):
+    default_x = FACE_X
+    for slug, t, w_line, g_line, *rest in (json.load(open(a.clips)) if a.clips else CLIPS):
+        FACE_X = rest[0] if rest else default_x  # optional 5th field: face position (share of width)
         tmp = os.path.join(a.out, f'.{slug}.png')
         frame = grab(os.path.join(a.hd, slug + '.mp4'), t, tmp)
         if not a.short_only:

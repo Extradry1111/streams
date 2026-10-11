@@ -531,7 +531,7 @@ def cmd_render(a):
             # blurred full-bleed background + the action in the middle, cropped to 4:3 so it stays big
             fg_h = round(W * 3 / 4)
             vf = (f"[0:v]split[a][b];[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},gblur=sigma=10,eq=brightness=-0.12,scale={W}:{H}[bg];"
-                  f"[b]crop=ih*4/3:ih,scale={W}:{fg_h}[fg];[bg][fg]overlay=0:(H-h)/2-{round(H * 0.04)},{subs},fps={a.fps},format=yuv420p[v]")
+                  f"[b]crop=ih*4/3:ih:(iw-ow)*{a.focus}:0,scale={W}:{fg_h}[fg];[bg][fg]overlay=0:(H-h)/2-{round(H * 0.04)},{subs},fps={a.fps},format=yuv420p[v]")
         else:
             vf = f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease,pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,{subs},fps={a.fps},format=yuv420p[v]"
         enc = ['-c:v', 'libx264', '-preset', a.preset, '-profile:v', 'high']
@@ -568,6 +568,7 @@ def main():
     s.add_argument('--format', choices=['short', 'wide'], default='short'); s.add_argument('--title', help='hook text on top of a short')
     s.add_argument('--no-censor', action='store_true', help='show swear words uncensored in captions')
     s.add_argument('--trim', nargs=2, metavar=('START', 'END'), help='use only this part of the clip (clip-relative times)')
+    s.add_argument('--focus', type=float, default=0.5, help='short: horizontal position of the 4:3 crop, 0 = left edge, 1 = right edge (e.g. a webcam on the right of a screen share)')
     s.add_argument('--preset', default='medium')
     s.add_argument('--style', choices=sorted(STYLES), default='classic', help='caption look: ' + '; '.join(f'{k}: {v["desc"]}' for k, v in STYLES.items()))
     s.add_argument('--fps', type=int, default=30); s.add_argument('--crf', type=int, default=19)

@@ -363,6 +363,15 @@ def cmd_audio(a):
 
 
 # ---------------------------------------------------------------- words
+def _spoken_len(w):
+    """Rough time a word takes to say: syllables, plus a beat after punctuation."""
+    core = re.sub(r'[^a-z0-9]', '', w.lower())
+    syl = len(re.findall(r'[aeiouy]+', core)) or (len(core) + 1) // 2 or 1
+    if re.fullmatch(r'\d+', core):
+        syl = 2 * len(core)  # numbers are read out: "two fifty"
+    return 0.6 + syl + (0.8 if re.search(r'[.,!?;:…]$', w) else 0)
+
+
 def cmd_words(a):
     txt = open(a.srt, encoding='utf8').read().replace('\r', '')
     words = []
@@ -377,8 +386,8 @@ def cmd_words(a):
         ws = text.split()
         if not ws:
             continue
-        # SRT has no word timing: spread the cue over its words by length
-        weights = [len(w) + 2 for w in ws]
+        # SRT has no word timing: spread the cue over its words by how long they take to say
+        weights = [_spoken_len(w) for w in ws]
         tot, t = sum(weights), s
         for w, k in zip(ws, weights):
             d = (e - s) * k / tot
@@ -461,24 +470,33 @@ def build_ass(words, W, H, fmt, title=None, style='classic', clean=True):
     st = STYLES[style]
     short = fmt == 'short'
     size = round(W * (st['size'] if short else st['wide']))
-    y = round(H * (0.745 if short else 0.86))
+    video_top = (H - round(W * 3 / 4)) // 2 - round(H * 0.04)  # where render() places the 4:3 video in a short
+    y = round(H * (0.73 if short else 0.86))
     border = (3, max(6, size // st['ow'])) if st['box'] else (1, max(3, size // st['ow']))
     lines = [
         '[Script Info]', 'ScriptType: v4.00+', f'PlayResX: {W}', f'PlayResY: {H}', 'WrapStyle: 0', 'ScaledBorderAndShadow: yes', '',
         '[V4+ Styles]',
         'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
         'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-        f"Style: Cap,{st['font']},{size},{st['text']},{st['text']},{st['outline']},&H90000000,0,0,0,0,100,100,0,0,{border[0]},{border[1]},{0 if st['box'] else max(2, size // 22)},5,60,60,0,1",
+        f"Style: Cap,{st['font']},{size},{st['text']},{st['text']},{st['outline']},&H80000000,0,0,0,0,100,100,0,0,{border[0]},{border[1]},{0 if st['box'] else max(3, size // 14)},5,60,60,0,1",
         f"Style: Title,Montserrat Black,{round(W * 0.062)},{st['title_text']},{st['title_text']},{st['title_box']},{st['title_box']},0,0,0,0,100,100,0,0,3,{round(W * 0.018)},0,8,70,70,{round(H * 0.085)},1",
         '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     ]
     if title and short:
-        lines.append(f'Dialogue: 2,{_ass_time(0)},{_ass_time(10 ** 5)},Title,,0,0,0,,{_esc(title.upper())}')
+        lines.append(f'Dialogue: 2,{_ass_time(0)},{_ass_time(10 ** 5)},Title,,0,0,0,,'
+                     f'{{\\an2\\pos({W // 2},{video_top - round(H * 0.022)})}}{_esc(title.upper())}')
     extra = f"\\frz{st['tilt']}" if st['tilt'] else ''
-    for ch in _chunks(words, st['words'] if short else max(6, st['words']), 16 if short and st['words'] <= 3 else 40):
+    chunks = _chunks(words, st['words'] if short else max(6, st['words']), 16 if short and st['words'] <= 3 else 40)
+    for ci, ch in enumerate(chunks):
+        nxt = chunks[ci + 1][0]['s'] if ci + 1 < len(chunks) else None
         for i, w in enumerate(ch):
             s = w['s']
-            e = ch[i + 1]['s'] if i + 1 < len(ch) else max(w['e'], s + 0.25)
+            if i + 1 < len(ch):
+                e = ch[i + 1]['s']
+            else:
+                e = max(w['e'] + 0.15, s + 0.3)
+                if nxt is not None:
+                    e = nxt if nxt - e < 0.4 else min(e, nxt)  # bridge short pauses, never overlap the next caption
             parts = []
             for j, x in enumerate(ch):
                 t = _esc(x['w'].upper() if st['upper'] else x['w'])

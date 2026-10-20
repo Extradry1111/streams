@@ -113,7 +113,11 @@ def wide_thumb(frame, w_line, g_line, out):
 
 def short_cover(frame, w_line, g_line, out):
     W, H = 1080, 1920
-    top = 520  # text area above the streamer
+    # Upload screens show the cover cropped to about 3:4 around the centre, cutting
+    # ~240 px off the top and bottom, so text and face stay inside this band.
+    safe = 270
+    tb = text_block(w_line, g_line, 900, 150)
+    top = safe + tb.height - 40  # streamer starts right under the text
     bg = crop_to(frame, W, H, FACE_X).filter(ImageFilter.GaussianBlur(30)).convert('RGBA')
     bg = Image.blend(bg, Image.new('RGBA', (W, H), (0, 0, 0, 255)), 0.45)
     person = crop_to(frame, W, H - top, FACE_X).filter(ImageFilter.UnsharpMask(radius=2, percent=60)).convert('RGBA')
@@ -122,8 +126,7 @@ def short_cover(frame, w_line, g_line, out):
     for i in range(160):
         fd.line((0, i, W, i), fill=int(255 * i / 160))
     bg.paste(person, (0, top), fade)
-    tb = text_block(w_line, g_line, 900, 150)
-    bg.alpha_composite(tb, ((W - tb.width) // 2, max(60, (top + 40 - tb.height) // 2)))
+    bg.alpha_composite(tb, ((W - tb.width) // 2, safe))
     bg.convert('RGB').save(out, quality=92)
 
 

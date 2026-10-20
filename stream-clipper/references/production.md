@@ -93,6 +93,10 @@ what happens (#fail, #rizz, #prank…), the community (#looksmax…), then 1-2 b
 (#fyp, #streamclips). Never put slurs or the censored words back into post text. Also
 collect all post files into one `posts.md` for the user.
 
+Per-creator override: if `clips/<creator>/POST-FORMAT.md` exists, follow it instead of
+the template above (for rasmrr, write only the name and the description: no hashtags,
+timecodes or source line).
+
 ## 5. Deliver
 
 - Send files if the channel allows (respect size limits; `--max-mb`), otherwise give

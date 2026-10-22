@@ -68,17 +68,22 @@ the edges of the frame, use `--format wide` for that clip and say why.
 ## 3b. Preview (cover) for each short
 
 ```
-clipper.py cover hd/01.mp4 8 "His mugshot was *AI* the whole time" covers/01.jpg --logo logo.png
+clipper.py cover hd/01.mp4 8 "His mugshot was *AI* the whole time" covers/01.jpg
 ```
 
 1080×1920 TikTok cover: the frame at that time in the short's layout, the hook in big
-caps (`*word*` turns yellow), optional round logo badge. Pick the frame from a strip of
+caps (`*word*` turns yellow). TikTok's profile grid shows only the middle 3:4 (y 240-1680),
+so the frame and hook sit inside that zone; check each cover cropped that way. No logo
+unless the user asks (`--logo` puts a small badge on the frame's corner). Pick the frame from a strip of
 8 frames across the clip: a face reacting or the key object, never a blurry transition.
 Send all covers plus one grid of them so the user can compare at a glance.
 
 ## 4. Post text (name, description, hashtags)
 
-For every clip write a `NN-slug.post.md` next to the videos, ready to copy-paste:
+If the user set a post format, use only that. Example of a short-only format (two lines per clip):
+`<title with 1-2 emoji>` then `<2-3 sentence description>`, nothing else.
+
+Otherwise, for every clip write a `NN-slug.post.md` next to the videos, ready to copy-paste:
 
 ```
 # 01 · <short name of the clip>

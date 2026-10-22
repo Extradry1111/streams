@@ -475,10 +475,10 @@ def cmd_render(a):
 
 
 def cmd_cover(a):
-    """TikTok cover: one frame in the short layout, big hook (*word* = yellow), optional round logo badge."""
+    """TikTok cover: one frame in the short layout, big hook (*word* = yellow), optional round logo badge.
+    TikTok's profile grid shows only the middle 3:4 of the cover (y 240-1680), so everything is kept inside it."""
     W, H = 1080, 1920
-    hook = re.sub(r'\*([^*]+)\*', r'{\\c&H004DE1FF&}\1{\\c&H00FFFFFF&}', _esc(a.hook.upper()).replace('(', '(')) if False else \
-        re.sub(r'\*([^*]+)\*', lambda m: '{\\c&H004DE1FF&}' + m.group(1) + '{\\c&H00FFFFFF&}', a.hook.upper().replace('{', '(').replace('}', ')'))
+    hook = re.sub(r'\*([^*]+)\*', lambda m: '{\\c&H004DE1FF&}' + m.group(1) + '{\\c&H00FFFFFF&}', a.hook.upper().replace('{', '(').replace('}', ')'))
     with tempfile.TemporaryDirectory() as tmp:
         ass = os.path.join(tmp, 'c.ass')
         open(ass, 'w', encoding='utf8').write('\n'.join([
@@ -488,15 +488,15 @@ def cmd_cover(a):
             'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
             'Style: Hook,Montserrat Black,104,&H00FFFFFF,&H00FFFFFF,&H00000000,&H90000000,0,0,0,0,100,100,0,0,1,9,4,5,70,70,0,1',
             '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
-            f'Dialogue: 1,0:00:00.00,0:00:10.00,Hook,,0,0,0,,{{\\pos({W // 2},{int(H * 0.79)})}}{hook}', '']))
+            f'Dialogue: 1,0:00:00.00,0:00:10.00,Hook,,0,0,0,,{{\\pos({W // 2},1400)}}{hook}', '']))
         fg = (f"[0:v]split[a][b];[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},gblur=sigma=10,"
               f"eq=brightness=-0.15,scale={W}:{H}[bg];[b]crop=ih*4/3:ih,scale={W}:{W * 3 // 4},drawbox=x=0:y=0:w=iw:h=ih:color=0xFFE14D:t=10[fg];"
-              f"[bg][fg]overlay=0:{int(H * 0.17)}[v1];")
+              f"[bg][fg]overlay=0:290[v1];")
         ins = ['-ss', str(secs(a.time)), '-i', a.inp]
         if a.logo:
             ins += ['-i', a.logo]
             fg += ("[1:v]scale=220:220,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(hypot(X-110,Y-110),110),255,0)'[lg];"
-                   f"[v1][lg]overlay=(W-w)/2:{int(H * 0.035)}[v2];[v2]")
+                   f"[v1][lg]overlay=W-w-30:1100-h-30[v2];[v2]")
         else:
             fg += '[v1]'
         fg += f"subtitles={ass}:fontsdir={os.path.abspath(FONTS)}[v]"

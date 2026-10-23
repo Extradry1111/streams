@@ -13,3 +13,4 @@ Why is rasmr long PUMP? Because Flood looked down at him with his piercing blue 
 - Leave out timecodes, hashtags and the "From rasmrr's Twitch stream…" source line.
 - Separate clips with `---`. Put an HTML comment with the file slug above each block (`<!-- 01-flood-story -->`) so it is clear which video the text belongs to.
 - Notes on edits and what was left out go at the very end, under `---`, outside the clip blocks.
+- A standard footer (Twitch link, subscribe, disclaimer, hashtags) goes under every video. It lives in `brand/video-footer.md`; copy it once into each `posts.md`, right after the VOD line, under "Footer for every video".

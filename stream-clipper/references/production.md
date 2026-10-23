@@ -80,7 +80,8 @@ Send all covers plus one grid of them so the user can compare at a glance.
 
 ## 4. Post text (name, description, hashtags)
 
-If the user set a post format, use only that. Example of a short-only format (two lines per clip):
+If the user set a post format, use only that. If the channel has a standard footer
+(e.g. `brand/FOOTER.md` in the repo), put it once at the end of the posts file to paste under every description. Example of a short-only format (two lines per clip):
 `<title with 1-2 emoji>` then `<2-3 sentence description>`, nothing else.
 
 Otherwise, for every clip write a `NN-slug.post.md` next to the videos, ready to copy-paste:

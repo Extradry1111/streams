@@ -30,7 +30,7 @@ Pick the first that works:
       `Content-Type: application/octet-stream`. `wait_for_job` until `stopped`.
    3. `export_transcript` per composition with `format: srt`,
       `include_speaker_labels: off`. Save each as `subs/NN.srt`.
-   4. `clipper.py words subs/NN.srt subs/NN.words.json`.
+   4. `clipper.py words subs/NN.srt subs/NN.words.json --audio hd/NN-slug.mp4` (`--audio` fits each word to where he is actually speaking, so captions stay in sync through pauses).
    Show the user the Descript project URL.
 3. Neither works → render without captions and tell the user why.
 

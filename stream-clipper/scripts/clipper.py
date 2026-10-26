@@ -372,9 +372,46 @@ def _spoken_len(w):
     return 0.6 + syl + (0.8 if re.search(r'[.,!?;:…]$', w) else 0)
 
 
+def _voiced(path, hop=0.02):
+    """Per-frame "is he talking" mask from the clip's audio, so words land on speech, not pauses."""
+    import numpy as np
+    pcm = subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-vn', '-ac', '1', '-ar', '16000', '-f', 's16le', '-'],
+                         capture_output=True, check=True).stdout
+    x = np.frombuffer(pcm, np.int16).astype(np.float32) / 32768
+    n = int(16000 * hop)
+    fr = x[:len(x) // n * n].reshape(-1, n)
+    db = 20 * np.log10(np.sqrt((fr ** 2).mean(1)) + 1e-6)
+    db = np.convolve(db, np.ones(3) / 3, 'same')
+    floor, peak = np.percentile(db, 10), np.percentile(db, 95)
+    on = db > max(floor + 0.35 * (peak - floor), -45)
+    # close tiny gaps inside words, drop single-frame blips
+    for _ in range(2):
+        on[1:-1] |= on[:-2] & on[2:]
+    on[1:-1] &= on[:-2] | on[2:]
+    return on, hop
+
+
+def _place(ws, weights, s, e, voiced):
+    """Spread words over the voiced frames of [s, e]; even spread if the cue is mostly unvoiced."""
+    on, hop = voiced
+    a, b = max(0, int(s / hop)), min(len(on), int(e / hop) + 1)
+    idx = [i for i in range(a, b) if on[i]]
+    if len(idx) * hop < 0.35 * (e - s) or len(idx) < len(ws):
+        return None
+    tot = sum(weights)
+    out, acc = [], 0.0
+    for w, k in zip(ws, weights):
+        i0 = idx[min(len(idx) - 1, int(acc / tot * len(idx)))]
+        acc += k
+        i1 = idx[min(len(idx) - 1, max(0, int(acc / tot * len(idx)) - 1))]
+        out.append({'w': w, 's': round(max(s, i0 * hop), 3), 'e': round(min(e, (i1 + 1) * hop), 3)})
+    return out
+
+
 def cmd_words(a):
     txt = open(a.srt, encoding='utf8').read().replace('\r', '')
-    words = []
+    voiced = _voiced(a.audio) if a.audio else None
+    words, snapped = [], 0
     for blk in re.split(r'\n\s*\n', txt.strip()):
         m = re.search(r'(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)\s*\n(.*)', blk, re.S)
         if not m:
@@ -386,14 +423,19 @@ def cmd_words(a):
         ws = text.split()
         if not ws:
             continue
-        # SRT has no word timing: spread the cue over its words by how long they take to say
+        # SRT has no word timing: spread the cue over its words by how long they take to say,
+        # and with --audio only over the moments he is actually talking
         weights = [_spoken_len(w) for w in ws]
+        placed = _place(ws, weights, s, e, voiced) if voiced else None
+        if placed:
+            words += placed; snapped += 1
+            continue
         tot, t = sum(weights), s
         for w, k in zip(ws, weights):
             d = (e - s) * k / tot
             words.append({'w': w, 's': round(t, 3), 'e': round(t + d, 3)}); t += d
     json.dump(words, open(a.out, 'w'), ensure_ascii=False, indent=0)
-    print(f'{len(words)} words -> {a.out}')
+    print(f'{len(words)} words -> {a.out}' + (f' ({snapped} cues fitted to speech)' if voiced else ''))
 
 
 def cmd_transcribe(a):
@@ -561,7 +603,9 @@ def main():
     s = sp.add_parser('cut'); s.add_argument('vod'); s.add_argument('start'); s.add_argument('end'); s.add_argument('out')
     s.add_argument('--height', type=int, default=1080); s.add_argument('--crf', type=int, default=18); s.set_defaults(f=cmd_cut)
     s = sp.add_parser('audio'); s.add_argument('inp'); s.add_argument('out'); s.set_defaults(f=cmd_audio)
-    s = sp.add_parser('words'); s.add_argument('srt'); s.add_argument('out'); s.set_defaults(f=cmd_words)
+    s = sp.add_parser('words'); s.add_argument('srt'); s.add_argument('out')
+    s.add_argument('--audio', help='the clip itself: fit word timing to where speech is (better caption sync)')
+    s.set_defaults(f=cmd_words)
     s = sp.add_parser('transcribe'); s.add_argument('inp'); s.add_argument('out'); s.add_argument('--model', default='small')
     s.add_argument('--lang'); s.set_defaults(f=cmd_transcribe)
     s = sp.add_parser('render'); s.add_argument('inp'); s.add_argument('words'); s.add_argument('out')

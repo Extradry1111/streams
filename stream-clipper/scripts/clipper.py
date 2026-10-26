@@ -440,7 +440,7 @@ def build_ass(words, W, H, fmt, title=None, style='classic', clean=True):
         'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
         'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
         f"Style: Cap,{st['font']},{size},{st['text']},{st['text']},{st['outline']},&H90000000,0,0,0,0,100,100,0,0,{border[0]},{border[1]},{0 if st['box'] else max(2, size // 22)},5,60,60,0,1",
-        f"Style: Title,Montserrat Black,{round(W * 0.062)},{st['title_text']},{st['title_text']},{st['title_box']},{st['title_box']},0,0,0,0,100,100,0,0,3,{round(W * 0.018)},0,8,70,70,{round(H * 0.085)},1",
+        f"Style: Title,Montserrat Black,{round(W * 0.062)},{st['title_text']},{st['title_text']},{st['title_box']},{st['title_box']},0,0,0,0,100,100,0,0,3,{round(W * 0.018)},0,8,70,70,{round(H * 0.14)},1",
         '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     ]
     if title and short:

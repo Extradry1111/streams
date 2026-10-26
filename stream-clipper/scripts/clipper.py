@@ -410,13 +410,15 @@ def build_ass(words, W, H, fmt, title=None, style='classic', clean=True):
     size = round(W * (st['size'] if short else st['wide']))
     y = round(H * (0.745 if short else 0.86))
     border = (3, max(6, size // st['ow'])) if st['box'] else (1, max(3, size // st['ow']))
+    # title box sits just above the video window (bottom-anchored), clear of TikTok's top tabs
+    title_mv = H - ((H - round(W * 3 / 4)) // 2 - round(H * 0.04)) + round(H * 0.02)
     lines = [
         '[Script Info]', 'ScriptType: v4.00+', f'PlayResX: {W}', f'PlayResY: {H}', 'WrapStyle: 0', 'ScaledBorderAndShadow: yes', '',
         '[V4+ Styles]',
         'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
         'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
         f"Style: Cap,{st['font']},{size},{st['text']},{st['text']},{st['outline']},&H90000000,0,0,0,0,100,100,0,0,{border[0]},{border[1]},{0 if st['box'] else max(2, size // 22)},5,60,60,0,1",
-        f"Style: Title,Montserrat Black,{round(W * 0.062)},{st['title_text']},{st['title_text']},{st['title_box']},{st['title_box']},0,0,0,0,100,100,0,0,3,{round(W * 0.018)},0,8,70,70,{round(H * 0.085)},1",
+        f"Style: Title,Montserrat Black,{round(W * 0.062)},{st['title_text']},{st['title_text']},{st['title_box']},{st['title_box']},0,0,0,0,100,100,0,0,3,{round(W * 0.018)},0,2,70,70,{title_mv},1",
         '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     ]
     if title and short:

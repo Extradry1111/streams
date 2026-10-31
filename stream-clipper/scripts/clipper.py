@@ -480,7 +480,15 @@ def cmd_render(a):
         ass = os.path.join(tmp, 'subs.ass')
         open(ass, 'w', encoding='utf8').write(build_ass(words, W, H, a.format, a.title, style=a.style, clean=not a.no_censor))
         subs = f"subtitles={ass}:fontsdir={os.path.abspath(FONTS)}"
-        if short:
+        if short and a.stack:
+            # two regions of the frame (e.g. two webcams) stacked on top of each other, each full width,
+            # over the blurred full frame; given as W:H:X:Y,W:H:X:Y in source pixels
+            regs = [[int(v) for v in r.split(':')] for r in a.stack.split(',')]
+            hs = [round(W * rh / rw) // 2 * 2 for rw, rh, _, _ in regs]
+            vf = (f"[0:v]split=3[a][b0][b1];[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},gblur=sigma=10,eq=brightness=-0.12,scale={W}:{H}[bg];"
+                  + ''.join(f"[b{i}]crop={rw}:{rh}:{rx}:{ry},scale={W}:{hs[i]}[s{i}];" for i, (rw, rh, rx, ry) in enumerate(regs))
+                  + f"[s0][s1]vstack[fg];[bg][fg]overlay=0:{round(H * 0.24)},{subs},fps={a.fps},format=yuv420p[v]")
+        elif short:
             # blurred full-bleed background + the action in the middle, cropped to 4:3 so it stays big
             # (--fg 16:9 keeps the whole frame, for layouts with webcams or text at the edges)
             full = a.fg == '16:9'
@@ -524,6 +532,7 @@ def main():
     s = sp.add_parser('render'); s.add_argument('inp'); s.add_argument('words'); s.add_argument('out')
     s.add_argument('--format', choices=['short', 'wide'], default='short'); s.add_argument('--title', help='hook text on top of a short')
     s.add_argument('--crop', metavar='W:H:X:Y', help='crop the source before laying it out, e.g. 624:351:0:0 for a corner webcam')
+    s.add_argument('--stack', metavar='W:H:X:Y,W:H:X:Y', help='short: stack two regions of the frame (e.g. two webcams) instead of one centred view')
     s.add_argument('--fg', choices=['4:3', '16:9'], default='4:3', help='short: crop the video to 4:3 (default) or keep the whole 16:9 frame')
     s.add_argument('--no-censor', action='store_true', help='show swear words uncensored in captions')
     s.add_argument('--trim', nargs=2, metavar=('START', 'END'), help='use only this part of the clip (clip-relative times)')

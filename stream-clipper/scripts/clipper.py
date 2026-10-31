@@ -428,11 +428,11 @@ STYLES = {
 }
 
 
-def build_ass(words, W, H, fmt, title=None, style='classic', clean=True):
+def build_ass(words, W, H, fmt, title=None, style='classic', clean=True, sub_y=None):
     st = STYLES[style]
     short = fmt == 'short'
     size = round(W * (st['size'] if short else st['wide']))
-    y = round(H * (0.745 if short else 0.86))
+    y = round(H * (sub_y or (0.745 if short else 0.86)))
     border = (3, max(6, size // st['ow'])) if st['box'] else (1, max(3, size // st['ow']))
     lines = [
         '[Script Info]', 'ScriptType: v4.00+', f'PlayResX: {W}', f'PlayResY: {H}', 'WrapStyle: 0', 'ScaledBorderAndShadow: yes', '',
@@ -478,9 +478,20 @@ def cmd_render(a):
     W, H = (1080, 1920) if short else (1920, 1080)
     with tempfile.TemporaryDirectory() as tmp:
         ass = os.path.join(tmp, 'subs.ass')
-        open(ass, 'w', encoding='utf8').write(build_ass(words, W, H, a.format, a.title, style=a.style, clean=not a.no_censor))
+        open(ass, 'w', encoding='utf8').write(build_ass(words, W, H, a.format, a.title, style=a.style, clean=not a.no_censor,
+                                                    sub_y=0.86 if short and a.screen else None))
         subs = f"subtitles={ass}:fontsdir={os.path.abspath(FONTS)}"
-        if short and a.stack:
+        if short and a.stack and a.screen:
+            # the screen region on top, the two webcams side by side under it, captions below them
+            sw, sh, sx, sy = (int(v) for v in a.screen.split(':'))
+            regs = [[int(v) for v in r.split(':')] for r in a.stack.split(',')]
+            top, hs = round(H * 0.25), round(W * sh / sw) // 2 * 2
+            ch = round(W / 2 * regs[0][1] / regs[0][0]) // 2 * 2
+            vf = (f"[0:v]split=4[a][sc][b0][b1];[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},gblur=sigma=10,eq=brightness=-0.12,scale={W}:{H}[bg];"
+                  f"[sc]crop={sw}:{sh}:{sx}:{sy},scale={W}:{hs}[s];"
+                  + ''.join(f"[b{i}]crop={rw}:{rh}:{rx}:{ry},scale={W // 2}:{ch}[c{i}];" for i, (rw, rh, rx, ry) in enumerate(regs))
+                  + f"[c0][c1]hstack[cams];[bg][s]overlay=0:{top}[t];[t][cams]overlay=0:{top + hs + 16},{subs},fps={a.fps},format=yuv420p[v]")
+        elif short and a.stack:
             # two regions of the frame (e.g. two webcams) stacked on top of each other, each full width,
             # over the blurred full frame; given as W:H:X:Y,W:H:X:Y in source pixels
             regs = [[int(v) for v in r.split(':')] for r in a.stack.split(',')]
@@ -532,6 +543,7 @@ def main():
     s = sp.add_parser('render'); s.add_argument('inp'); s.add_argument('words'); s.add_argument('out')
     s.add_argument('--format', choices=['short', 'wide'], default='short'); s.add_argument('--title', help='hook text on top of a short')
     s.add_argument('--crop', metavar='W:H:X:Y', help='crop the source before laying it out, e.g. 624:351:0:0 for a corner webcam')
+    s.add_argument('--screen', metavar='W:H:X:Y', help='short with --stack: show this region of the frame (e.g. the game screen) on top, webcams side by side below')
     s.add_argument('--stack', metavar='W:H:X:Y,W:H:X:Y', help='short: stack two regions of the frame (e.g. two webcams) instead of one centred view')
     s.add_argument('--fg', choices=['4:3', '16:9'], default='4:3', help='short: crop the video to 4:3 (default) or keep the whole 16:9 frame')
     s.add_argument('--no-censor', action='store_true', help='show swear words uncensored in captions')

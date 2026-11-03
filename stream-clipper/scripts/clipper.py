@@ -290,7 +290,7 @@ def cmd_cut(a):
     t0, t1 = secs(a.start), secs(a.end)
     with tempfile.TemporaryDirectory() as tmp:
         lst, first = _fetch_window(vod, t0, t1, a.height, tmp)
-        ff('-f', 'concat', '-safe', '0', '-i', lst, '-ss', f'{t0 - first:.3f}', '-t', f'{t1 - t0:.3f}',
+        ff('-f', 'concat', '-safe', '0', '-ss', f'{t0 - first:.3f}', '-i', lst, '-t', f'{t1 - t0:.3f}',
            '-c:v', 'libx264', '-preset', 'medium', '-crf', str(a.crf), '-c:a', 'aac', '-b:a', '192k',
            '-movflags', '+faststart', a.out)
     print(a.out, f'{os.path.getsize(a.out) / 1e6:.1f} MB')
@@ -486,11 +486,12 @@ def cmd_render(a):
             sw, sh, sx, sy = (int(v) for v in a.screen.split(':'))
             regs = [[int(v) for v in r.split(':')] for r in a.stack.split(',')]
             top, hs = round(H * 0.25), round(W * sh / sw) // 2 * 2
-            ch = round(W / 2 * regs[0][1] / regs[0][0]) // 2 * 2
-            vf = (f"[0:v]split=4[a][sc][b0][b1];[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},gblur=sigma=10,eq=brightness=-0.12,scale={W}:{H}[bg];"
+            n = len(regs)
+            ch = round(W / n * regs[0][1] / regs[0][0]) // 2 * 2
+            vf = (f"[0:v]split={n + 2}[a][sc]{''.join(f'[b{i}]' for i in range(n))};[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},gblur=sigma=10,eq=brightness=-0.12,scale={W}:{H}[bg];"
                   f"[sc]crop={sw}:{sh}:{sx}:{sy},scale={W}:{hs}[s];"
-                  + ''.join(f"[b{i}]crop={rw}:{rh}:{rx}:{ry},scale={W // 2}:{ch}[c{i}];" for i, (rw, rh, rx, ry) in enumerate(regs))
-                  + f"[c0][c1]hstack[cams];[bg][s]overlay=0:{top}[t];[t][cams]overlay=0:{top + hs + 16},{subs},fps={a.fps},format=yuv420p[v]")
+                  + ''.join(f"[b{i}]crop={rw}:{rh}:{rx}:{ry},scale={W // n}:{ch}[c{i}];" for i, (rw, rh, rx, ry) in enumerate(regs))
+                  + f"{''.join(f'[c{i}]' for i in range(n))}hstack=inputs={n}[cams];[bg][s]overlay=0:{top}[t];[t][cams]overlay=0:{top + hs + 16},{subs},fps={a.fps},format=yuv420p[v]")
         elif short and a.stack:
             # two regions of the frame (e.g. two webcams) stacked on top of each other, each full width,
             # over the blurred full frame; given as W:H:X:Y,W:H:X:Y in source pixels
